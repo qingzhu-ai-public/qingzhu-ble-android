@@ -2,7 +2,7 @@
 
 青竹 Blue 的 Android BLE SDK 与配套示例工程（`qz-ble-sdk` + `QZBleDemo`）。
 
-📖 文档站：<https://qingzhu-blue.github.io/qingzhu-blue/>
+📖 文档站：<https://qingzhu-ai-public.github.io/qingzhu-blue/>
 
 > **当前状态：设计阶段。** 仓库结构与接口边界已定，SDK 代码尚未落地。
 > 文档站 Android 栏目正在补齐背景知识（总览 / 权限适配 / 常见问题排查）。
@@ -46,9 +46,9 @@ qingzhu-ble-android/
 
 ## 相关仓库
 
-- [`qingzhu-blue`](https://github.com/qingzhu-blue/qingzhu-blue) —— 官网与文档站（BLE 知识、工程实践）
+- [`qingzhu-blue`](https://github.com/qingzhu-ai-public/qingzhu-blue) —— 官网与文档站（BLE 知识、工程实践）
 
 ## 参与
 
 SDK 尚未进入编码阶段，现阶段最有用的反馈是**你想解决的具体问题**：
-在 [Issues](https://github.com/qingzhu-blue/qingzhu-ble-android/issues) 里描述你的设备与场景即可。
+在 [Issues](https://github.com/qingzhu-ai-public/qingzhu-ble-android/issues) 里描述你的设备与场景即可。
