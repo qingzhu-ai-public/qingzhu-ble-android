@@ -1,0 +1,8 @@
+# 全仓统一 LF：避免换行符随平台变化产生无意义 diff
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jar binary
+*.aar binary
+*.keystore binary
