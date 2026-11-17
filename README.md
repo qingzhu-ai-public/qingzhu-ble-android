@@ -212,6 +212,23 @@ QingzhuSdk.startScan(new QSdk.ScanListener() {
 
 列表去重请使用 `getStableId()`，不要只依赖 MAC。地址轮换设备只有稳定身份不变。
 
+扫描设置：
+
+```java
+QingzhuSdk.startScan(
+        ScanOptions.builder()
+                .setTimeoutMs(30_000)       // 30 秒后自动停止；0 = 持续扫描
+                .setMinRssi(-80)             // 忽略更弱的设备
+                .setNamePrefix("ESL")        // 名称前缀，大小写不敏感
+                .addProtocol("generic")      // 只显示指定协议
+                .addStableId("A1B2C3D4E5F6") // 只显示指定稳定身份
+                .build(),
+        listener
+);
+```
+
+过滤只作用于 UI 回调，任务池仍然能看到完整广播，不影响自动寻人和重寻址。
+
 停止扫描：
 
 ```java

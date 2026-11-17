@@ -7,8 +7,9 @@ import android.content.Context;
 
 import com.qingzhu.ble.sdk.core.QSdk;
 import com.qingzhu.ble.sdk.core.api.QCommand;
-import com.qingzhu.ble.sdk.core.common.QLog;
 import com.qingzhu.ble.sdk.core.api.QTask;
+import com.qingzhu.ble.sdk.core.api.ScanOptions;
+import com.qingzhu.ble.sdk.core.common.QLog;
 import com.qingzhu.ble.sdk.core.device.QDevice;
 import com.qingzhu.ble.sdk.core.protocol.ProtocolPlugin;
 import com.qingzhu.ble.sdk.core.protocol.ProtocolRegistry;
@@ -81,6 +82,11 @@ public final class QingzhuSdk {
     /** 订阅扫描结果并确保扫描开启（设备快照按 stableId 去重、每秒批量回调） */
     public static void startScan(QSdk.ScanListener listener) {
         QSdk.getInstance().startScan(listener);
+    }
+
+    /** 按扫描时长、RSSI、名称前缀、协议或稳定 ID 过滤开始 UI 扫描 */
+    public static void startScan(ScanOptions options, QSdk.ScanListener listener) {
+        QSdk.getInstance().startScan(options, listener);
     }
 
     /** 停止扫描：退订 UI 回调并真正停止底层扫描；任务需要寻人时仍可按需重新拉起 */

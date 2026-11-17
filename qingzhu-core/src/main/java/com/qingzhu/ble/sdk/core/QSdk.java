@@ -13,6 +13,7 @@ import com.qingzhu.ble.adaptive.AdaptiveConcurrency;
 import com.qingzhu.ble.adaptive.BatchOutcome;
 import com.qingzhu.ble.sdk.core.api.QCommand;
 import com.qingzhu.ble.sdk.core.api.QTask;
+import com.qingzhu.ble.sdk.core.api.ScanOptions;
 import com.qingzhu.ble.sdk.core.api.TaskIntentResult;
 import com.qingzhu.ble.sdk.core.api.TaskOutcome;
 import com.qingzhu.ble.sdk.core.ble.AndroidBleAdapter;
@@ -55,6 +56,10 @@ public final class QSdk {
     private volatile QTaskPool taskPool;
     /** UI 层的扫描监听（可为 null = 只做任务池的寻人/重寻址，不展示） */
     private volatile ScanListener uiScanListener;
+    /** 当前 UI 扫描设置（只影响 UI 回调，不影响任务池寻人） */
+    private volatile ScanOptions uiScanOptions = ScanOptions.defaults();
+    /** UI 扫描时长到点关闭 */
+    private final Runnable uiScanTimeoutRunnable = this::stopScan;
     /** 扫描状态监听（扫描中/已停止）：UI 据此显示滚动图标 + 文字 */
     private volatile ScanStateListener scanStateListener;
     /** 扫描是否已开启（一旦开启就持续跑，直到 SDK 释放，满足「任务随时需要扫描」的自动扫描语义） */
@@ -111,8 +116,24 @@ public final class QSdk {
 
     /** 订阅扫描结果（发现资源），并确保扫描开启 */
     public void startScan(ScanListener listener) {
+        startScan(ScanOptions.defaults(), listener);
+    }
+
+    /**
+     * 按指定条件开始 UI 扫描。
+     *
+     * <p>扫描时长和过滤只作用于 UI 回调；任务池仍然能看到完整广播，不会被 UI 过滤影响。
+     * 到点会自动调用 {@link #stopScan()}。
+     */
+    public void startScan(ScanOptions options, ScanListener listener) {
         ensureInit();
+        uiScanOptions = options != null ? options : ScanOptions.defaults();
         uiScanListener = listener;
+        main.removeCallbacks(uiScanTimeoutRunnable);
+        long timeoutMs = uiScanOptions.getTimeoutMs();
+        if (timeoutMs > 0) {
+            main.postDelayed(uiScanTimeoutRunnable, timeoutMs);
+        }
         ensureScanning();
     }
 
@@ -123,7 +144,9 @@ public final class QSdk {
      * 要阻止任务继续运行，请取消或删除对应任务。
      */
     public void stopScan() {
+        main.removeCallbacks(uiScanTimeoutRunnable);
         uiScanListener = null;
+        uiScanOptions = ScanOptions.defaults();
         if (adapter == null) {
             scanning = false;
             notifyScanState(false);
@@ -180,7 +203,8 @@ public final class QSdk {
                 taskPool.onDevices(devices); // 寻人匹配
                 ScanListener l = uiScanListener;
                 if (l != null) {
-                    main.post(() -> l.onDevices(devices));
+                    List<QDevice> uiDevices = filterForUi(devices);
+                    main.post(() -> l.onDevices(uiDevices));
                 }
             }
 
@@ -208,7 +232,8 @@ public final class QSdk {
                 notifyScanState(false);
                 ScanListener l = uiScanListener;
                 if (l != null) {
-                    main.post(() -> l.onScanStopped(devices));
+                    List<QDevice> uiDevices = filterForUi(devices);
+                    main.post(() -> l.onScanStopped(uiDevices));
                 }
             }
         });
@@ -219,6 +244,20 @@ public final class QSdk {
         if (l != null) {
             main.post(() -> l.onScanStateChanged(s));
         }
+    }
+
+    private List<QDevice> filterForUi(List<QDevice> devices) {
+        ScanOptions options = uiScanOptions;
+        if (options == null || !options.hasFilters()) {
+            return devices;
+        }
+        List<QDevice> filtered = new ArrayList<>();
+        for (QDevice device : devices) {
+            if (options.accepts(device)) {
+                filtered.add(device);
+            }
+        }
+        return filtered;
     }
 
     public void clearScanCache() {
