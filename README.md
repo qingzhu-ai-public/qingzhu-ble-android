@@ -2,6 +2,8 @@
 
 ### [下载试玩（1 个主端 + 2 个从端）](#下载试玩) · 具体实现思路看文章《[AI 时代，如何做一个生产级 Android BLE SDK ？](https://qingzhu-ai-public.github.io/qingzhu-blue/#android/experience/from-runnable-to-production)》 · [在线文档](https://qingzhu-ai-public.github.io/qingzhu-blue/)
 
+> Fullstack 教学基线源码：[reference/fullstack](reference/fullstack)（独立参考工程，不参与主 SDK 构建）。
+
 # Qingzhu-BLE
 
 [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
@@ -75,6 +77,7 @@ Qingzhu-BLE 的出发点不是再写一个薄封装，而是把这两类问题�
   - [11. 多设备调度](#11-多设备调度)
   - [12. 自定义协议](#12-自定义协议)
 - [构建](#构建)
+  - [Fullstack 参考源码](#fullstack-参考源码)
 - [测试](#测试)
 - [Screenshot](#screenshot)
 - [常见问题](#常见问题)
@@ -531,6 +534,33 @@ qingzhu-demo-main/build/outputs/apk/debug/qingzhu-demo-main-debug.apk
 qingzhu-demo-sim-generic/build/outputs/apk/debug/qingzhu-demo-sim-generic-debug.apk
 qingzhu-demo-sim-eddystone/build/outputs/apk/debug/qingzhu-demo-sim-eddystone-debug.apk
 ```
+
+### Fullstack 参考源码
+
+文章里的 Fullstack 教学基线也放在仓库中：
+
+```text
+reference/fullstack/
+├── fullstack-ble-sdk/             # 教学级 BLE SDK
+├── fullstack-ble-demo/            # 主端 Demo
+├── fullstack-ble-peripheral-sim/  # 从端模拟器
+├── settings.gradle                # 独立 Gradle 工程
+├── build.gradle
+├── gradle.properties
+└── README.md
+```
+
+它是独立 Gradle 工程，不加入主 `settings.gradle`，不会影响青竹 SDK 构建。用于对照「AI 生成的教学级 SDK」和「任务式生产架构」的差异。
+
+从仓库根目录构建：
+
+```bash
+./gradlew -p reference/fullstack :fullstack-ble-sdk:testDebugUnitTest
+./gradlew -p reference/fullstack :fullstack-ble-demo:assembleDebug
+./gradlew -p reference/fullstack :fullstack-ble-peripheral-sim:assembleDebug
+```
+
+更多说明见 [reference/fullstack/README.md](reference/fullstack/README.md)。
 
 ## 测试
 

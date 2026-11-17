@@ -1,6 +1,7 @@
 # Android
 *.iml
 .gradle/
+.kotlin/
 build/
 local.properties
 captures/
