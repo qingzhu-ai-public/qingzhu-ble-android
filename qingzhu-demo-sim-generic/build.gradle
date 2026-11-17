@@ -1,0 +1,45 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+apply from: '../config.gradle'
+
+android {
+    namespace 'com.qingzhu.sim.generic'
+    compileSdk rootProject.ext.android.compileSdk
+
+    defaultConfig {
+        applicationId "com.qingzhu.sim.generic"
+        minSdk rootProject.ext.android.minSdk
+        targetSdk rootProject.ext.android.targetSdk
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+
+dependencies {
+    // 模拟从机是"设备端"，不依赖任何 SDK 代码——纯 Android API 模拟一台可编程
+    // BLE 外设（任意广播 + echo GATT），从零实现才能保证主端协议是真验过的。
+    // 仅 UI 展示层引入 AppCompat + Fragment + PhotoView（图片点击全屏缩放），不涉及任何 BLE SDK。
+    implementation 'androidx.appcompat:appcompat:1.3.1'
+    implementation 'androidx.fragment:fragment-ktx:1.3.6'
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
+    implementation 'com.github.chrisbanes:PhotoView:2.3.0'
+}

@@ -1,0 +1,35 @@
+plugins {
+    id 'com.android.application'
+}
+
+apply from: '../config.gradle'
+
+android {
+    namespace 'com.qingzhu.sim.eddystone'
+    compileSdk rootProject.ext.android.compileSdk
+
+    defaultConfig {
+        applicationId "com.qingzhu.sim.eddystone"
+        minSdk rootProject.ext.android.minSdk
+        targetSdk rootProject.ext.android.targetSdk
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    // 模拟从机是"设备端"，不依赖任何 SDK 代码——用纯 Android API 模拟一台
+    // Eddystone Beacon（广播）+ 可连接的 GATT 外设，从零实现才能保证主端插件是真验过的。
+}

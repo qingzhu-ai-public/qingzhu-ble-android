@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 去掉黑色系统 ActionBar，页面标题改由界面自己绘制 -->
+<resources>
+    <style name="Theme.QingzhuSim" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg_page</item>
+        <item name="android:statusBarColor">@color/bg_page</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

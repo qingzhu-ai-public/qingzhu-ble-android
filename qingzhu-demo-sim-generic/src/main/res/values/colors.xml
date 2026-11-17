@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_blue">#2F7D5F</color>
+    <color name="brand_dark">#246349</color>
+
+    <color name="bg_activity">#F7F6F0</color>
+    <color name="bg_card">#FFFFFF</color>
+    <color name="bg_meta">#EFF5EF</color>
+    <color name="divider">#E6E9DF</color>
+    <color name="border">#DCE5DA</color>
+
+    <color name="text_primary">#20342B</color>
+    <color name="text_secondary">#5B6F63</color>
+    <color name="text_tertiary">#9AA99D</color>
+    <color name="text_disabled">#BDCABC</color>
+    <color name="text_inverse">#FFFFFF</color>
+
+    <color name="success">#3F956C</color>
+    <color name="warning">#D98324</color>
+    <color name="error">#C0553A</color>
+
+    <color name="row_pressed">#0D000000</color>
+</resources>

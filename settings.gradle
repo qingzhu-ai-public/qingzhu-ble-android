@@ -1,0 +1,26 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+
+rootProject.name = 'qingzhu-ble-android'
+
+include ':qingzhu-core'
+include ':qingzhu-company-sdk'
+include ':qingzhu-protocol-generic'
+include ':qingzhu-protocol-eddystone'
+include ':qingzhu-demo-main'
+include ':qingzhu-demo-sim-generic'
+include ':qingzhu-demo-sim-eddystone'

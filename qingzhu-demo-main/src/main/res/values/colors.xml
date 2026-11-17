@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 青竹 Bamboo 设计系统色板：米白纸感 + 竹青主色 + 暖橙点缀 -->
+<resources>
+    <color name="brand">#2F7D5F</color>
+    <color name="brand_deep">#246349</color>
+    <color name="brand_soft">#E9F3EC</color>
+
+    <color name="bg_page">#F7F6F0</color>
+    <color name="bg_card">#FFFFFF</color>
+    <color name="bg_input">#F2F6F0</color>
+    <color name="line">#E6E9DF</color>
+
+    <color name="ink">#20342B</color>
+    <color name="ink_2">#5B6F63</color>
+    <color name="ink_3">#9AA99D</color>
+
+    <color name="ok">#3F956C</color>
+    <color name="ok_soft">#E7F3EB</color>
+    <color name="warn">#D98324</color>
+    <color name="warn_soft">#FDF1E2</color>
+    <color name="danger">#C0553A</color>
+</resources>

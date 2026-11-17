@@ -1,0 +1,35 @@
+plugins {
+    id 'com.android.library'
+}
+
+apply from: '../config.gradle'
+
+android {
+    namespace 'com.qingzhu.protocol.generic.v2'
+    compileSdk rootProject.ext.android.compileSdk
+
+    defaultConfig {
+        minSdk rootProject.ext.android.minSdk
+        targetSdk rootProject.ext.android.targetSdk
+        testInstrumentationRunner rootProject.ext.android.testInstrumentationRunner
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    // 依赖新内核（不再是旧 qingzhu-ble-core）
+    api project(':qingzhu-core')
+    testImplementation 'junit:junit:4.13.2'
+}

@@ -14,3 +14,7 @@ desktop.ini
 *.swp
 .idea/
 .vscode/
+.playwright-cli/
+hs_err_pid*.log
+replay_pid*.log
+*.hprof

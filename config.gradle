@@ -1,0 +1,13 @@
+ext {
+    android = [
+            compileSdk               : 35,
+            buildTools               : "35.0.0",
+            minSdk                   : 24,
+            targetSdk                : 35,
+            compileSdkVersion        : 35,
+            minSdkVersion            : 24,
+            targetSdkVersion         : 35,
+            testInstrumentationRunner: "androidx.test.runner.AndroidJUnitRunner",
+            consumerProguardFiles    : "consumer-rules.pro"
+    ]
+}
