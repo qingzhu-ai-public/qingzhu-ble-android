@@ -142,7 +142,7 @@ git clone https://github.com/qingzhu-ai-public/qingzhu-ble-android.git
 cd qingzhu-ble-android
 ```
 
-#### 第一条提示词：让 AI 先理解项目
+#### 理解项目的提示词
 
 复制到 Codex / Claude Code / Cursor / CodeBuddy 等工具：
 
@@ -165,50 +165,7 @@ https://github.com/qingzhu-ai-public/qingzhu-ble-android
 - 接入一个自有设备协议时必须实现哪些方法
 - 哪些能力已经实现，哪些仍是边界
 
-不要先写代码，不要改公开仓库，先输出理解结果和接入计划。
-```
-
-#### 第二条提示词：让它规划你的 App 接入
-
-把尖括号内容替换成你的项目信息：
-
-```text
-现在请把青竹 BLE SDK 接入我的 Android App：
-
-- 项目路径：<我的 App 工程路径>
-- applicationId：<我的 applicationId>
-- minSdk：<我的 minSdk>
-- 设备协议：<已有 ProtocolPlugin / 需要新建协议>
-- 目标：<扫描设备 / 批量发送 / 保持长连接 / 其他>
-
-要求：
-1. 先阅读项目现有 build.gradle、Application、权限声明和蓝牙相关代码
-2. 不要直接重写现有 BLE 代码，先输出最小改动接入计划
-3. 明确 modules 是源码依赖还是本地 AAR；优先复用现有模块
-4. 检查 BLUETOOTH_SCAN、BLUETOOTH_CONNECT、定位权限和 minSdk
-5. 接入 qingzhu-core、qingzhu-company-sdk 和对应协议模块
-6. 初始化 SDK 后，先实现扫描列表，再实现单设备提交，最后做批量测试
-7. 每完成一步运行构建；不要用“应该可以”代替编译结果
-8. 不要修改青竹公开仓库，只在我的 App 工程里做改动
-
-先输出计划，等我确认后再改代码。
-```
-
-#### 第三条提示词：接入完成后的验收
-
-```text
-请检查青竹 BLE SDK 的接入是否完整，逐项给出证据：
-- Application.onCreate() 是否只初始化一次
-- 是否注册了正确协议
-- 权限是否覆盖 Android 12+ 和 Android 11 及以下
-- 扫描结果是否按 stableId 去重，而不是只看 MAC
-- 同一设备是否只创建一个 QTask
-- 发送中再次连接 / 连续发送是否走意图队列
-- 是否处理 BUSY、CLOSED、CANCELLED、连接失败和操作失败
-- 任务列表是否展示 state / progress / error / outcome
-- 是否实际运行了 assembleDebug 和核心测试
-
-列出没验证的项目，不要编造测试结果。
+不要先写代码，不要改公开仓库，先输出理解结果。
 ```
 
 #### AI 阅读顺序
