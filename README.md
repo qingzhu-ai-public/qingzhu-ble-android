@@ -215,8 +215,7 @@ QingzhuSdk.startScan(new QSdk.ScanListener() {
 停止扫描：
 
 ```java
-QingzhuSdk.stopScan();      // 退订 UI 回调，任务需要时仍可继续扫描
-QingzhuSdk.stopScanning();  // 真正停止底层扫描
+QingzhuSdk.stopScan();      // 退订 UI 回调并停止底层扫描；任务需要寻人时仍可按需重新拉起
 ```
 
 扫描状态：

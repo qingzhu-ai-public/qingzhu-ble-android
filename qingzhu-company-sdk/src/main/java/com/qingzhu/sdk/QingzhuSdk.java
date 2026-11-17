@@ -23,7 +23,7 @@ import java.util.List;
  * 青竹 BLE SDK 开源门面。
  *
  * <p>定位：基于内核 {@code qingzhu-core} 的<b>开源对外入口</b>，直接暴露内核类型
- * （{@link QDevice} / {@link QTask} / {@link QCommand}），不做二次封装。
+ * （{@link QDevice} / {@link QTask} / {@link QCommand}），不做白标包装。
  *
  * <p>心智模型：<b>万物皆任务</b>——任务 = 一台设备 + 一条可选命令，内核负责寻人、排队、
  * 连接、发送、失败重试。接入方只需 init、扫描、提交任务。
@@ -83,14 +83,9 @@ public final class QingzhuSdk {
         QSdk.getInstance().startScan(listener);
     }
 
-    /** 退订扫描回调（扫描本身可能继续，供任务池寻人/重寻址） */
+    /** 停止扫描：退订 UI 回调并真正停止底层扫描；任务需要寻人时仍可按需重新拉起 */
     public static void stopScan() {
         QSdk.getInstance().stopScan();
-    }
-
-    /** 真正停止底层扫描（离开扫描页省电；仍有任务在跑时可能被自动重新拉起） */
-    public static void stopScanning() {
-        QSdk.getInstance().stopScanning();
     }
 
     /** 重启扫描（权限授予后 / 手动重扫） */

@@ -116,21 +116,21 @@ public final class QSdk {
         ensureScanning();
     }
 
-    /** 退订 UI 扫描回调（扫描本身可能继续，供任务池寻人/重寻址用） */
+    /**
+     * 停止扫描：退订 UI 回调并真正停止底层扫描。
+     *
+     * <p>这是唯一的停止入口。已有任务如果仍需寻人/重寻址，任务池会按需重新拉起扫描；
+     * 要阻止任务继续运行，请取消或删除对应任务。
+     */
     public void stopScan() {
         uiScanListener = null;
-    }
-
-    /**
-     * 真正停止底层扫描（与 {@link #stopScan()} 只退订 UI 回调不同，这里连底层扫描器也停掉）。
-     * 用于「离开扫描页即停扫描省电」的场景。
-     *
-     * <p>注意：扫描为任务池服务（寻人 / 连接重寻址），若停扫后仍有任务在跑，任务池会通过
-     * {@link #ensureScanning()} 自动重新拉起扫描，因此扫描不会长期停住——这是预期行为。
-     */
-    public void stopScanning() {
-        ensureInit();
+        if (adapter == null) {
+            scanning = false;
+            notifyScanState(false);
+            return;
+        }
         scanning = false;
+        scanGen.incrementAndGet(); // 让旧扫描会话的迟到回调失效
         adapter.stopScan();
         notifyScanState(false);
     }
