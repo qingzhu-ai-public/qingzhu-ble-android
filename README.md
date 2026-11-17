@@ -1,6 +1,6 @@
 ![Qingzhu BLE Android SDK](docs/images/hero-pain.png)
 
-### [下载试玩（1 个主端 + 2 个从端）](#下载试玩) · [在线文档](https://qingzhu-ai-public.github.io/qingzhu-blue/)
+### [下载试玩（1 个主端 + 2 个从端）](#下载试玩) · [工程实践长文](https://qingzhu-ai-public.github.io/qingzhu-blue/#android/experience/from-runnable-to-production) · [在线文档](https://qingzhu-ai-public.github.io/qingzhu-blue/)
 
 # Qingzhu-BLE
 
