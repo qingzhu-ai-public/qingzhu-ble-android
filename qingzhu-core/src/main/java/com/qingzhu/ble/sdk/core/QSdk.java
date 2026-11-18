@@ -312,8 +312,16 @@ public final class QSdk {
      * 被显式批次认领的任务不会再进入自动批次（反之亦然），不会重复统计。
      */
     public Batch beginBatch() {
+        return beginBatch(null);
+    }
+
+    /**
+     * 开始一轮批量任务，并在所有任务终态后回调批次汇总结果。
+     * 用于批量配置页判断「这一轮是否完成、是否可以退出」。
+     */
+    public Batch beginBatch(BatchListener listener) {
         ensureInit();
-        return new Batch(this);
+        return new Batch(this, listener);
     }
 
     /** 任务池（clear / list / get） */
@@ -567,6 +575,40 @@ public final class QSdk {
 
     // ============ 批次 ============
 
+    /** 批量配置完成监听，回调在主线程。 */
+    public interface BatchListener {
+        void onFinished(BatchResult result);
+    }
+
+    /** 一轮批量配置的汇总结果，用于判断是否可以退出配置页。 */
+    public static final class BatchResult {
+        private final int total;
+        private final int succeeded;
+        private final int connectFailed;
+        private final int operationFailed;
+        private final int cancelled;
+
+        private BatchResult(int total, int succeeded, int connectFailed,
+                            int operationFailed, int cancelled) {
+            this.total = total;
+            this.succeeded = succeeded;
+            this.connectFailed = connectFailed;
+            this.operationFailed = operationFailed;
+            this.cancelled = cancelled;
+        }
+
+        public int getTotal() { return total; }
+        public int getSucceeded() { return succeeded; }
+        public int getConnectFailed() { return connectFailed; }
+        public int getOperationFailed() { return operationFailed; }
+        public int getCancelled() { return cancelled; }
+
+        /** 是否所有任务都按 SUCCEEDED 终态结束 */
+        public boolean isAllSucceeded() {
+            return total > 0 && succeeded == total;
+        }
+    }
+
     /**
      * 一轮批量任务的会话。调用方提交完设备后调用 {@link #finish()}，
      * SDK 等到所有任务终态后自动统计并回灌自动并发学习。
@@ -578,6 +620,7 @@ public final class QSdk {
         private static final long CHECK_INTERVAL_MS = 200;
 
         private final QSdk sdk;
+        private final BatchListener listener;
         private final List<QTask> tasks = new ArrayList<>();
         private final Set<String> taskIds = new HashSet<>();
         private final long createdAt = SystemClock.elapsedRealtime();
@@ -585,8 +628,9 @@ public final class QSdk {
         private boolean cancelled;
         private boolean reported;
 
-        private Batch(QSdk sdk) {
+        private Batch(QSdk sdk, BatchListener listener) {
             this.sdk = sdk;
+            this.listener = listener;
         }
 
         /**
@@ -688,19 +732,52 @@ public final class QSdk {
             reported = true;
             sdk.releaseBatchTasks(taskIds);
             if (tasks.isEmpty()) {
+                notifyFinished(new BatchResult(0, 0, 0, 0, 0));
                 return;
             }
 
-            boolean hasCancelled = cancelled;
+            int succeeded = 0;
+            int connectFailed = 0;
+            int operationFailed = 0;
+            int cancelledCount = 0;
             for (QTask task : tasks) {
-                if (task.getOutcome() == null
-                        || task.getOutcome() == TaskOutcome.NONE
-                        || task.getOutcome() == TaskOutcome.CANCELLED) {
-                    hasCancelled = true;
-                    break;
+                TaskOutcome outcome = task.getOutcome();
+                if (outcome == null || outcome == TaskOutcome.NONE
+                        || outcome == TaskOutcome.CANCELLED) {
+                    cancelledCount++;
+                    continue;
+                }
+                switch (outcome) {
+                    case SUCCEEDED:
+                        succeeded++;
+                        break;
+                    case CONNECT_FAILED:
+                        connectFailed++;
+                        break;
+                    case OPERATION_FAILED:
+                        operationFailed++;
+                        break;
+                    default:
+                        break;
                 }
             }
+            boolean hasCancelled = cancelled || cancelledCount > 0;
             sdk.reportBatch(tasks, hasCancelled);
+            notifyFinished(new BatchResult(
+                    tasks.size(), succeeded, connectFailed, operationFailed, cancelledCount));
+        }
+
+        private void notifyFinished(BatchResult result) {
+            if (listener == null) {
+                return;
+            }
+            sdk.main.post(() -> {
+                try {
+                    listener.onFinished(result);
+                } catch (Throwable t) {
+                    QLog.e(TAG, "批次完成回调异常：" + t);
+                }
+            });
         }
     }
 

@@ -124,6 +124,11 @@ public final class QingzhuSdk {
         return QSdk.getInstance().beginBatch();
     }
 
+    /** 批量配置：所有任务终态后回调汇总结果，用于判断是否退出配置页 */
+    public static QSdk.Batch beginBatch(QSdk.BatchListener listener) {
+        return QSdk.getInstance().beginBatch(listener);
+    }
+
     /** 任务池句柄（list / get / clear） */
     public static QSdk.Tasks getTasks() {
         return QSdk.getInstance().getTasks();

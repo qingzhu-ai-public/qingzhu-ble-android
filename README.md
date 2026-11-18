@@ -493,6 +493,109 @@ static String describeTask(QTask t) {
 
 Demo 当前**没有使用** `executeIntent(command, callback)` 的 `TaskIntentStatus`：因为它只是展示任务列表，不需要把每次点击绑定到业务数据库或命令链。业务 App 若需要「每条命令独立回执」，再用第 9 节的命令级回调。
 
+#### 8.4 单个配置：什么时候可以退出页面
+
+单个设备配置，推荐用 `executeIntent(command, callback)` 绑定这次业务动作：
+
+```java
+QTask task = QingzhuSdk.submit(mac, null);
+
+TaskIntentResult accepted = task.executeIntent(configCommand,
+        (intentId, status, result, error) -> {
+            if (status == TaskIntentStatus.SUCCEEDED
+                    && task.getOutcome() == TaskOutcome.SUCCEEDED
+                    && task.getError() == null) {
+                // 配置成功：可以退出配置页
+                finish();
+            } else if (status == TaskIntentStatus.FAILED) {
+                // 配置失败：展示 error，不要退出
+                showError(error);
+            } else {
+                // 取消：按业务决定是否重试
+                showCancelled();
+            }
+        });
+
+if (accepted == TaskIntentResult.BUSY
+        || accepted == TaskIntentResult.CLOSED) {
+    // 这条命令没有被接受，不会收到上面的 callback
+    showRejected(accepted);
+}
+```
+
+判断规则：
+
+| 组合 | 结果 | 页面动作 |
+|---|---|---|
+| `TaskIntentResult.BUSY/CLOSED` | 没被接受，不会回调 | 提示，不退出 |
+| `TaskIntentStatus.SUCCEEDED` + `TaskOutcome.SUCCEEDED` + `error == null` | 配置成功 | 退出 |
+| `TaskIntentStatus.FAILED` + `CONNECT_FAILED` | 连接阶段失败 | 展示错误，不退出 |
+| `TaskIntentStatus.FAILED` + `OPERATION_FAILED` | 发送/业务失败 | 展示错误，不退出 |
+| `TaskIntentStatus.CANCELLED` | 用户取消或前序失败 | 展示取消，不退出 |
+
+注意：
+
+- `result` 是设备回显，可能为 null，不能只靠它判成功；
+- `state == CONNECTED` 且 `outcome == SUCCEEDED` 也可能是成功，不能一直等 `READY`；
+- `BUSY/CLOSED` 不会触发完成回调，要按 `TaskIntentResult` 当场处理。
+
+#### 8.5 批量配置：什么时候可以退出页面
+
+批量配置要用显式 `Batch`。它和「自动学习批次」不是一回事：自动学习用 3 秒静默窗口收集普通 `submit`，`Batch` 是业务层明确划定的一轮配置边界。
+
+```java
+QSdk.Batch batch = QingzhuSdk.beginBatch(result -> {
+    // 回调在主线程；所有任务终态、待办清空后只调用一次
+    if (result.isAllSucceeded()) {
+        // 全部配置成功，可以退出页面
+        finish();
+    } else {
+        showBatchSummary(
+                result.getTotal(),
+                result.getSucceeded(),
+                result.getConnectFailed(),
+                result.getOperationFailed(),
+                result.getCancelled()
+        );
+    }
+});
+
+int rejected = 0;
+for (String mac : macs) {
+    if (batch.submit(mac, configCommand) == null) {
+        rejected++; // BUSY / CLOSED / 被别的批次认领：没有计入本轮
+    }
+}
+batch.finish(); // 提交完成，SDK 等待所有任务终态
+```
+
+`BatchResult` 的含义：
+
+| 字段 | 含义 |
+|---|---|
+| `getTotal()` | 本轮被接受的任务数 |
+| `getSucceeded()` | `TaskOutcome.SUCCEEDED` 数量 |
+| `getConnectFailed()` | 连接阶段失败数量 |
+| `getOperationFailed()` | 已连接后的发送/业务失败数量 |
+| `getCancelled()` | 取消、删除或未终态数量 |
+| `isAllSucceeded()` | `total > 0 且 succeeded == total` |
+
+批量配置结束条件：
+
+```text
+所有被接受的任务 outcome != NONE
+且 pendingIntentCount() == 0
+且不再处于 SEARCHING / QUEUED / CONNECTING / SENDING
+→ BatchListener.onFinished(result)
+```
+
+额外规则：
+
+- `batch.submit()` 返回 null 的命令不会执行，也不会计入 `BatchResult`；
+- `batch.cancel()` 也会触发 `onFinished()`，但 `cancelled` 会大于 0；
+- 10 分钟兜底超时会强制结算，未终态任务按取消处理；
+- 回调只在主线程触发一次，可以直接 `finish()` 或刷新页面。
+
 ### 9. 意图排队与完成回调
 
 提交意图并立即判断是否被接受：

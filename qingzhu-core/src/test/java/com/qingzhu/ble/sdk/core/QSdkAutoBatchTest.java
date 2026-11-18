@@ -29,6 +29,7 @@ import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -128,8 +129,9 @@ public class QSdkAutoBatchTest {
     @Test
     public void explicitBatchAndAutoSubmitDoNotDoubleReport() {
         int runsBefore = AdaptiveConcurrency.get().snapshot().getRuns();
+        AtomicReference<QSdk.BatchResult> resultRef = new AtomicReference<>();
 
-        QSdk.Batch batch = sdk.beginBatch();
+        QSdk.Batch batch = sdk.beginBatch(resultRef::set);
         assertNotNull(batch.submit(device("AA:BB:CC:DD:EE:01"), send()));
         assertNotNull(batch.submit(device("AA:BB:CC:DD:EE:02"), send()));
         assertNotNull(batch.submit(device("AA:BB:CC:DD:EE:03"), send()));
@@ -144,6 +146,10 @@ public class QSdkAutoBatchTest {
         advanceClock(4_000);
 
         assertEquals(runsBefore + 1, AdaptiveConcurrency.get().snapshot().getRuns());
+        assertNotNull("显式批次应回调完成结果", resultRef.get());
+        assertEquals(3, resultRef.get().getTotal());
+        assertEquals(3, resultRef.get().getSucceeded());
+        assertTrue(resultRef.get().isAllSucceeded());
     }
 
     @Test
