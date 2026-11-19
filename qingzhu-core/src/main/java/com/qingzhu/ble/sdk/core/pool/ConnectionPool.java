@@ -24,7 +24,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * queue 决定超出时排多久，rejectionPolicy 决定队列也满了怎么处理。
  *
  * 单连接是这个模型的退化配置：new ConnectionPool(1, 1, 0, IMMEDIATE_FAIL)
- *（技术设计文档第12.4节）。
+ *（《新SDK架构-技术实现方案.md》第12.4节）。
  *
  * 同设备的连接请求管理——所有去重都按 stableId（设备身份）而不是 mac，
  * 因为同一台设备换址后的重复调用也必须被识别为"同一台"：
@@ -122,6 +122,14 @@ public final class ConnectionPool {
             });
     /** 建连闸门等待单台建连终态的兜底超时（正常由 onConnected/onFailed 放行） */
     private static final long CONNECT_GATE_TIMEOUT_MS = 30_000;
+    /**
+     * 正在占用建连闸门的放行信号（mac -> latch）。
+     * 建连途中被主动释放（页面退出 / 任务删除）时，连接流程不会再回调 onConnected/onFailed，
+     * 如果不在这里放行，闸门会被这台已取消的设备占满 {@link #CONNECT_GATE_TIMEOUT_MS}，
+     * 期间所有设备的新连接全部排队。
+     */
+    private final ConcurrentHashMap<String, java.util.concurrent.CountDownLatch> gateLatchByMac =
+            new ConcurrentHashMap<>();
 
     public ConnectionPool(int corePoolSize, int maxPoolSize, int queueCapacity, RejectionPolicy rejectionPolicy) {
         if (corePoolSize < 1 || maxPoolSize < corePoolSize) {
@@ -149,7 +157,7 @@ public final class ConnectionPool {
     }
 
     /**
-     * @param device 扫描阶段识别到的完整 QDevice（含 metadata，如 轮换地址协议 的 deviceMac）。
+     * @param device 扫描阶段识别到的完整 QDevice（含 metadata，如协议自定义的 deviceMac）。
      *               会把 metadata 逐条复制进新建的 Session，供连接阶段（如重寻址）读取。
      */
     public void requestConnect(QDevice device, PoolConnectListener listener) {
@@ -276,6 +284,22 @@ public final class ConnectionPool {
             return;
         }
 
+        // 设备正在异步释放（上一条链路还没完全关闭）：这个请求是在释放前就排进闸门的，
+        // 此刻不能直接开新链路（会和正在关闭的旧链路交叉，表现为刚连上就被关掉的“迟到链路”）。
+        // 转入释放期间的排队表，GATT 完全关闭并等从机复位后自动执行；已有更新的请求则丢弃这个旧请求。
+        if (releasingStableIds.contains(stableId)) {
+            ConnectRequest existing = pendingByStableId.putIfAbsent(stableId, request);
+            if (existing == null) {
+                QLog.d(TAG, "设备释放中，闸门内的连接请求转入排队 stableId=" + stableId);
+            } else if (existing != request) {
+                // 释放期间已有更新的排队请求（取最后一次），这个旧请求被取代：必须回调失败，避免调用方悬挂
+                QLog.d(TAG, "设备释放中，闸门内的旧连接请求被更新的排队请求取代 stableId=" + stableId);
+                listener.onFailed(mac, com.qingzhu.ble.sdk.core.common.ErrorCode.INTERNAL_ERROR,
+                        "连接请求已被新的请求取代");
+            }
+            return;
+        }
+
         // 二次池满检查：requestConnect 的检查在闸门外，多个请求可能同时看到"池没满"而全部放行。
         // 闸门是串行的，这里是"最后一关"——池满则转排队，避免并发建连把槽位冲爆（突破 maxPoolSize）。
         if (activeSessions.size() >= maxPoolSize) {
@@ -297,7 +321,7 @@ public final class ConnectionPool {
         }
         Session session = SessionRegistry.getOrCreate(mac, type);
         int copied = device.copyMetadataInto(session);
-        // 宿主 SDK 定制的协议参数复制进 Session（key 加 "param." 前缀），协议步骤/Filter 读取
+        // 公司 SDK 定制的协议参数复制进 Session（key 加 "param." 前缀），协议步骤/Filter 读取
         if (request.getParams() != null) {
             request.getParams().copyInto(session);
         }
@@ -312,6 +336,7 @@ public final class ConnectionPool {
 
         // 建连闸门放行信号：本台建连到终态（成功/失败）后，下一台才能开始建连
         final java.util.concurrent.CountDownLatch established = new java.util.concurrent.CountDownLatch(1);
+        gateLatchByMac.put(mac, established);
         ConnectListener connectListener = new ConnectListener() {
             @Override
             public void onConnected(Session s) {
@@ -327,7 +352,7 @@ public final class ConnectionPool {
                     client.setUnexpectedCloseListener(() -> onUnexpectedDisconnect(stableId, mac));
                     // 认证完成后（onGattReady 已过）才提优先级：连接参数更新窗口不再撞上 discoverServices/MTU/认证，
                     // 对齐旧 SDK 时序（连接成功瞬间不 requestHighPriority，认证完成后再延迟 100ms 提优先级）。
-                    // 立即提优先级会导致 HCI LE Connection Update 撞上认证写帧 → 链路断/超时（轮换地址协议 第二次连接尤其明显）。
+                    // 立即提优先级会导致 HCI LE Connection Update 撞上认证写帧 → 链路断/超时（部分设备第二次连接尤其明显）。
                     client.requestHighPriorityDelayed();
                 }
                 // 状态就绪后放行建连闸门（外部回调可能耗时，放在放行之后）
@@ -384,6 +409,8 @@ public final class ConnectionPool {
             established.await(CONNECT_GATE_TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        } finally {
+            gateLatchByMac.remove(mac, established);
         }
     }
 
@@ -405,7 +432,7 @@ public final class ConnectionPool {
         activeSessions.remove(mac);
         activeMacByStableId.remove(stableId);
         SessionRegistry.remove(mac);
-        // 清缓存：失败后断开会导致 轮换地址协议 地址轮换，旧地址已失效，重连必须等新广播
+        // 清缓存：失败后断开可能导致设备地址轮换，旧地址已失效，重连必须等新广播
         com.qingzhu.ble.sdk.core.scan.ScanCache.getInstance().remove(stableId);
         long retryDelayMs = Math.min(RETRY_BASE_DELAY_MS * Math.max(1, attempt), RETRY_MAX_DELAY_MS);
         QLog.d(TAG, "连接失败重试退避 " + retryDelayMs + "ms stableId=" + stableId
@@ -447,6 +474,12 @@ public final class ConnectionPool {
      *          撤销重连登记（未发起的重连就此取消）。
      */
     private void releaseInternal(String mac, boolean preserveReconnect) {
+        // 建连途中被释放：连接流程已被取消，不会再回调终态，这里主动放行建连闸门，
+        // 否则闸门被这台已取消的设备占满 30s，期间所有设备的新连接都排队
+        java.util.concurrent.CountDownLatch gate = gateLatchByMac.get(mac);
+        if (gate != null) {
+            gate.countDown();
+        }
         // 停心跳（意外断开路径在 onUnexpectedDisconnect 里已停，这里重复调用是幂等的）
         com.qingzhu.ble.sdk.core.connect.HeartbeatManager.get().stop(mac);
         Session session = activeSessions.remove(mac);
@@ -459,7 +492,7 @@ public final class ConnectionPool {
                 // 主动断开：撤销自动重连登记（未发起的重连就此取消）
                 policyByStableId.remove(stableId);
             }
-            // 立刻清理 ScanCache 里这台设备的地址数据：断开后地址可能已失效（轮换地址协议 断连必换址），
+            // 立刻清理 ScanCache 里这台设备的地址数据：断开后地址可能已失效（部分设备断连必换址），
             // "缓存里有没有"成为地址新鲜度的唯一判据——重新连接必须等设备重新广播被扫到。
             // UI 层的行数据不受影响（行保留的是 QDevice 快照），等新广播到达自动刷新。
             com.qingzhu.ble.sdk.core.scan.ScanCache.getInstance().remove(stableId);
@@ -711,7 +744,7 @@ public final class ConnectionPool {
         return activeSessions.size();
     }
 
-    /** 该地址是否属于连接池里的活动连接（含连接进行中；含 轮换地址协议 重寻址后的实际 GATT 地址） */
+    /** 该地址是否属于连接池里的活动连接（含连接进行中；含重寻址后的实际 GATT 地址） */
     public boolean isActiveMac(String mac) {
         if (mac == null) {
             return false;

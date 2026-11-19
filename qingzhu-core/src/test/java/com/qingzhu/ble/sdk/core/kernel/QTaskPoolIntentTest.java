@@ -7,10 +7,10 @@ import android.os.Looper;
 
 import com.qingzhu.ble.sdk.core.api.QCommand;
 import com.qingzhu.ble.sdk.core.api.QTask;
-import com.qingzhu.ble.sdk.core.api.TaskIntentCallback;
-import com.qingzhu.ble.sdk.core.api.TaskIntentResult;
-import com.qingzhu.ble.sdk.core.api.TaskIntentStatus;
-import com.qingzhu.ble.sdk.core.api.TaskOutcome;
+import com.qingzhu.ble.sdk.core.api.Subscription;
+import com.qingzhu.ble.sdk.core.api.TaskResult;
+import com.qingzhu.ble.sdk.core.api.TaskSnapshot;
+import com.qingzhu.ble.sdk.core.api.TaskStage;
 import com.qingzhu.ble.sdk.core.api.TaskState;
 import com.qingzhu.ble.sdk.core.ble.BleAdapter;
 import com.qingzhu.ble.sdk.core.connect.ConnectParams;
@@ -30,7 +30,12 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 28)
@@ -38,7 +43,6 @@ public class QTaskPoolIntentTest {
 
     private FakeBleAdapter adapter;
     private QTaskPool pool;
-    private QTask task;
     private QDevice device;
 
     @Before
@@ -47,257 +51,250 @@ public class QTaskPoolIntentTest {
         pool = new QTaskPool(adapter, 0);
         pool.setMaxTransfers(1);
         pool.setMaxPendingIntents(8);
-
         device = new QDevice("AA:BB:CC:DD:EE:01", "device", -40, ProtocolType.of("test"));
-        task = pool.submit(device, QCommand.builder().connect().build());
+    }
+
+    /** 创建任务并连接成功，返回处于 CONNECTED 的任务 */
+    private QTask connectedTask() {
+        QTask task = pool.createTask(device);
+        task.connect(null);
         idle();
         assertNotNull(adapter.connectSink);
         adapter.connectSink.onConnected(device.getMac());
         idle();
         assertEquals(TaskState.CONNECTED, task.getState());
+        return task;
     }
 
     @Test
-    public void connectAgainIsIdempotent() {
-        TaskIntentResult result = task.executeIntent(QCommand.builder().connect().build());
+    public void createTaskReplacesExistingTask() {
+        QTask first = pool.createTask(device);
+        QTask second = pool.createTask(device);
 
-        assertEquals(TaskIntentResult.ALREADY_SATISFIED, result);
-        assertEquals(1, adapter.connectCalls);
-        assertEquals(TaskState.CONNECTED, task.getState());
+        assertTrue(first.isDeleted());
+        assertNotSame(first, second);
+        assertSame(second, pool.getTask(device.getMac()));
+        assertEquals(1, pool.snapshots().size());
     }
 
     @Test
-    public void connectDuringSendKeepsConnectionAndDoesNotOverwriteSend() {
-        assertEquals(TaskIntentResult.STARTED,
-                task.executeIntent(QCommand.builder().send("{\"action\":\"send-1\"}").build()));
-        waitForSendCount(1);
-
-        assertEquals(TaskIntentResult.ALREADY_SATISFIED,
-                task.executeIntent(QCommand.builder().connect().build()));
-        assertEquals(1, adapter.sentCommands.size());
-        assertEquals(TaskState.SENDING, task.getState());
-
-        adapter.sendSink.onDone("ok");
-        idle();
-
-        assertEquals(TaskState.CONNECTED, task.getState());
-        assertEquals(0, adapter.disconnectCalls);
-        assertEquals(TaskOutcome.SUCCEEDED, task.getOutcome());
+    public void getTaskOnlyQueriesAndNeverCreates() {
+        assertNull(pool.getTask("AA:BB:CC:DD:EE:99"));
+        assertEquals(0, pool.snapshots().size());
     }
 
     @Test
-    public void sendLoopQueuesUpToBoundAndRejectsExcess() {
-        assertEquals(TaskIntentResult.STARTED,
-                task.executeIntent(QCommand.builder().send("{\"action\":\"send-0\"}").build()));
-        waitForSendCount(1);
+    public void deleteTaskRemovesFromPool() {
+        QTask task = pool.createTask(device);
+        pool.deleteTask(device.getMac());
 
-        TaskIntentResult last = null;
-        for (int i = 1; i <= 9; i++) {
-            last = task.executeIntent(
-                    QCommand.builder().send("{\"action\":\"send-" + i + "\"}").build());
-        }
-
-        assertEquals(TaskIntentResult.BUSY, last);
-        assertEquals(8, task.pendingIntentCount());
-        assertEquals(1, adapter.sentCommands.size());
-
-        adapter.sendSink.onDone("ok");
-        idle();
-        waitForSendCount(2);
-        assertEquals("{\"action\":\"send-1\"}", adapter.sentCommands.get(1));
-        assertEquals(7, task.pendingIntentCount());
+        assertTrue(task.isDeleted());
+        assertNull(pool.getTask(device.getMac()));
+        assertEquals(0, pool.snapshots().size());
     }
 
     @Test
-    public void sendWhileConnectingWaitsForConnectThenStarts() {
-        QDevice secondDevice = new QDevice(
-                "AA:BB:CC:DD:EE:02", "device-2", -42, ProtocolType.of("test"));
-        QTask secondTask = pool.submit(
-                secondDevice, QCommand.builder().connect().build());
-        idle();
-
-        assertEquals(TaskIntentResult.QUEUED,
-                secondTask.executeIntent(
-                        QCommand.builder().send("{\"action\":\"after-connect\"}").build()));
-        assertEquals(TaskState.CONNECTING, secondTask.getState());
-
-        adapter.connectSink.onConnected(secondDevice.getMac());
-        idle();
-        waitForSendCount(1);
-
-        assertEquals(TaskState.SENDING, secondTask.getState());
-        assertEquals(0, secondTask.pendingIntentCount());
-    }
-
-    @Test
-    public void deletedTaskRejectsLaterIntents() {
+    public void sendOnDeletedTaskCallsBackClosed() {
+        QTask task = pool.createTask(device);
         task.delete();
+        List<TaskResult> results = new ArrayList<>();
+
+        task.send(QCommand.builder().send("{}").build(), results::add);
         idle();
 
-        assertEquals(TaskIntentResult.CLOSED,
-                task.executeIntent(QCommand.builder().send("{}").build()));
-        assertEquals(true, task.isDeleted());
+        assertEquals(1, results.size());
+        assertFalse(results.get(0).isSuccess());
+        assertEquals(TaskStage.CLOSED, results.get(0).stage());
     }
 
     @Test
-    public void queuedSendCallbacksFinishInOrder() {
-        TestCallback first = new TestCallback();
-        TestCallback second = new TestCallback();
+    public void connectAgainWhenConnectedSucceedsWithoutReconnecting() {
+        QTask task = connectedTask();
+        List<TaskResult> results = new ArrayList<>();
 
-        assertEquals(TaskIntentResult.STARTED, task.executeIntent(
-                QCommand.builder().send("{\"action\":\"first\"}").build(), first));
-        waitForSendCount(1);
-        assertEquals(TaskIntentResult.QUEUED, task.executeIntent(
-                QCommand.builder().send("{\"action\":\"second\"}").build(), second));
-
-        adapter.sendSink.onDone("first-result");
-        idle();
-        waitForSendCount(2);
-
-        assertEquals(1, first.records.size());
-        assertEquals(TaskIntentStatus.SUCCEEDED, first.records.get(0).status);
-        assertEquals("first-result", first.records.get(0).result);
-        assertEquals(0, second.records.size());
-
-        adapter.sendSink.onDone("second-result");
+        task.connect(results::add);
         idle();
 
-        assertEquals(1, second.records.size());
-        assertEquals(TaskIntentStatus.SUCCEEDED, second.records.get(0).status);
-        assertEquals("second-result", second.records.get(0).result);
+        assertEquals(1, adapter.connectCalls);
+        assertEquals(1, results.size());
+        assertTrue(results.get(0).isSuccess());
+        assertEquals(TaskState.CONNECTED, task.getState());
     }
 
     @Test
-    public void connectDuringSendCallbackReportsSuccess() {
-        TestCallback connectCallback = new TestCallback();
-        assertEquals(TaskIntentResult.STARTED,
-                task.executeIntent(QCommand.builder().send("{}").build()));
-        waitForSendCount(1);
+    public void sendSuccessCallsBackPayloadOnce() {
+        QTask task = connectedTask();
+        List<TaskResult> results = new ArrayList<>();
 
-        assertEquals(TaskIntentResult.ALREADY_SATISFIED,
-                task.executeIntent(QCommand.builder().connect().build(), connectCallback));
+        task.send(QCommand.builder().send("{\"a\":1}").keepConnected().build(), results::add);
+        waitForSendCount(1);
+        adapter.sendSink.onDone("echo");
         idle();
 
-        assertEquals(1, connectCallback.records.size());
-        assertEquals(TaskIntentStatus.SUCCEEDED, connectCallback.records.get(0).status);
+        assertEquals(1, results.size());
+        assertTrue(results.get(0).isSuccess());
+        assertEquals("echo", results.get(0).payload());
+        assertEquals(TaskState.CONNECTED, task.getState());
     }
 
     @Test
-    public void terminalFailureFailsCurrentAndCancelsPending() {
-        TestCallback current = new TestCallback();
-        TestCallback pending = new TestCallback();
-
-        assertEquals(TaskIntentResult.STARTED,
-                task.executeIntent(QCommand.builder().send("{}").build(), current));
+    public void cancelWhileSendingKeepsConnectionIfConnectedBefore() {
+        QTask task = connectedTask();
+        List<TaskResult> results = new ArrayList<>();
+        task.send(QCommand.builder().send("{}").keepConnected().build(), results::add);
         waitForSendCount(1);
-        assertEquals(TaskIntentResult.QUEUED,
-                task.executeIntent(QCommand.builder().send("{}").build(), pending));
-
-        adapter.sendSink.onFailed("boom");
-        idle();
-
-        assertEquals(1, current.records.size());
-        assertEquals(TaskIntentStatus.FAILED, current.records.get(0).status);
-        assertEquals(1, pending.records.size());
-        assertEquals(TaskIntentStatus.CANCELLED, pending.records.get(0).status);
-    }
-
-    @Test
-    public void cancelNotificationsAreDeliveredPerIntent() {
-        TestCallback current = new TestCallback();
-        TestCallback pending = new TestCallback();
-
-        assertEquals(TaskIntentResult.STARTED,
-                task.executeIntent(QCommand.builder().send("{}").build(), current));
-        waitForSendCount(1);
-        assertEquals(TaskIntentResult.QUEUED,
-                task.executeIntent(QCommand.builder().send("{}").build(), pending));
+        assertEquals(TaskState.SENDING, task.getState());
 
         task.cancel();
         idle();
 
-        assertEquals(TaskIntentStatus.CANCELLED, current.records.get(0).status);
-        assertEquals(TaskIntentStatus.CANCELLED, pending.records.get(0).status);
+        assertEquals(TaskState.CONNECTED, task.getState());
+        assertEquals(0, adapter.disconnectCalls);
+        assertEquals(1, adapter.abortCalls);
+        assertEquals(1, results.size());
+        assertEquals(TaskStage.CANCEL, results.get(0).stage());
+        assertFalse(task.isDeleted());
     }
 
     @Test
-    public void cancelWhileSendingClearsPendingAndDisconnects() {
-        assertEquals(TaskIntentResult.STARTED,
-                task.executeIntent(QCommand.builder().send("{\"action\":\"send-1\"}").build()));
-        waitForSendCount(1);
-        assertEquals(TaskIntentResult.QUEUED,
-                task.executeIntent(QCommand.builder().send("{\"action\":\"send-2\"}").build()));
-        assertEquals(1, task.pendingIntentCount());
+    public void cancelWhileConnectingReturnsToDisconnected() {
+        QTask task = pool.createTask(device);
+        List<TaskResult> results = new ArrayList<>();
+        task.connect(results::add);
+        idle();
+        assertEquals(TaskState.CONNECTING, task.getState());
 
         task.cancel();
         idle();
 
         assertEquals(TaskState.READY, task.getState());
-        assertEquals(0, task.pendingIntentCount());
         assertEquals(1, adapter.disconnectCalls);
-        assertEquals(TaskOutcome.CANCELLED, task.getOutcome());
+        assertEquals(1, results.size());
+        assertEquals(TaskStage.CANCEL, results.get(0).stage());
+        assertFalse(task.isDeleted());
     }
 
     @Test
-    public void sendFailureSetsOperationFailedOutcome() {
-        assertEquals(TaskIntentResult.STARTED,
-                task.executeIntent(QCommand.builder().send("{}").build()));
+    public void deleteWhileSendingAbortsDisconnectsAndRemoves() {
+        QTask task = connectedTask();
+        List<TaskResult> results = new ArrayList<>();
+        task.send(QCommand.builder().send("{}").keepConnected().build(), results::add);
         waitForSendCount(1);
 
-        adapter.sendSink.onFailed("operation failed");
+        task.delete();
         idle();
 
-        assertEquals(TaskOutcome.OPERATION_FAILED, task.getOutcome());
+        assertTrue(task.isDeleted());
+        assertEquals(1, adapter.abortCalls);
+        assertEquals(1, adapter.disconnectCalls);
+        assertNull(pool.getTask(device.getMac()));
+        assertEquals(1, results.size());
+        assertEquals(TaskStage.DELETE, results.get(0).stage());
     }
 
     @Test
-    public void connectFailureSetsConnectFailedOutcome() {
-        QDevice secondDevice = new QDevice(
-                "AA:BB:CC:DD:EE:03", "device-3", -45, ProtocolType.of("test"));
-        QTask secondTask = pool.submit(
-                secondDevice, QCommand.builder().connect().build());
+    public void disconnectKeepsTaskInPool() {
+        QTask task = connectedTask();
+        task.disconnect();
         idle();
 
-        adapter.connectSink.onFailed(secondDevice.getMac(), 133, "connect failed");
-        idle();
-
-        assertEquals(TaskOutcome.CONNECT_FAILED, secondTask.getOutcome());
+        assertFalse(task.isDeleted());
+        assertSame(task, pool.getTask(device.getMac()));
     }
 
     @Test
-    public void deletedTaskOutcomeIsCancelled() {
-        QDevice secondDevice = new QDevice(
-                "AA:BB:CC:DD:EE:04", "device-4", -45, ProtocolType.of("test"));
-        QTask secondTask = pool.submit(
-                secondDevice, QCommand.builder().connect().build());
+    public void staleConnectedCallbackOfReplacedTaskDoesNotDropSharedLink() {
+        QTask first = pool.createTask(device);
+        first.connect(null);
+        idle();
+        BleAdapter.ConnectSink firstSink = adapter.connectSink;
+        assertNotNull(firstSink);
+
+        // 快速重进：新任务替换旧任务（旧任务被删除并发起一次断开）
+        QTask second = pool.createTask(device);
+        second.connect(null);
+        idle();
+        int disconnectsBefore = adapter.disconnectCalls;
+
+        // 底层共享的同一条链路连上了：旧任务的迟到回调不能把它断掉
+        firstSink.onConnected(device.getMac());
         idle();
 
-        secondTask.delete();
-        idle();
-
-        assertEquals(TaskOutcome.CANCELLED, secondTask.getOutcome());
-        assertEquals(true, secondTask.isDeleted());
+        assertEquals(disconnectsBefore, adapter.disconnectCalls);
+        assertTrue(first.isDeleted());
+        assertFalse(second.isDeleted());
     }
 
     @Test
-    public void nextPendingIntentResetsOutcomeUntilFinal() {
-        assertEquals(TaskIntentResult.STARTED,
-                task.executeIntent(QCommand.builder().send("{\"action\":\"first\"}").build()));
+    public void deletedTaskConnectedCallbackStillDisconnectsWhenNoReplacement() {
+        QTask task = pool.createTask(device);
+        task.connect(null);
+        idle();
+        BleAdapter.ConnectSink sink = adapter.connectSink;
+        task.delete();
+        idle();
+        int disconnectsBefore = adapter.disconnectCalls;
+
+        sink.onConnected(device.getMac());
+        idle();
+
+        assertEquals(disconnectsBefore + 1, adapter.disconnectCalls);
+    }
+
+    @Test
+    public void disconnectAfterOverridesConnectedTaskAndDisconnects() {
+        QTask task = connectedTask(); // connect() 让任务带「保持连接」期望
+        List<TaskResult> results = new ArrayList<>();
+
+        task.send(QCommand.builder().send("{}").disconnectAfter().build(), results::add);
         waitForSendCount(1);
-        assertEquals(TaskIntentResult.QUEUED,
-                task.executeIntent(QCommand.builder().send("{\"action\":\"second\"}").build()));
-
-        adapter.sendSink.onDone("first");
-        idle();
-        waitForSendCount(2);
-
-        // 第二条在途：outcome 应回到 NONE，不能停留在上一条的终态（否则批次会提前收口）
-        assertEquals(TaskOutcome.NONE, task.getOutcome());
-
-        adapter.sendSink.onDone("second");
+        adapter.sendSink.onDone("ok");
         idle();
 
-        assertEquals(TaskOutcome.SUCCEEDED, task.getOutcome());
+        assertEquals(1, results.size());
+        assertTrue(results.get(0).isSuccess());
+        assertEquals(1, adapter.disconnectCalls);
+        assertEquals(TaskState.READY, task.getState());
+    }
+
+    @Test
+    public void disconnectWhileSendingReallyDisconnects() {
+        QTask task = connectedTask();
+        task.send(QCommand.builder().send("{}").keepConnected().build(), null);
+        waitForSendCount(1);
+        assertEquals(TaskState.SENDING, task.getState());
+
+        task.disconnect();
+        idle();
+
+        assertEquals(TaskState.READY, task.getState());
+        assertEquals(1, adapter.abortCalls);
+        assertEquals(1, adapter.disconnectCalls);
+        assertFalse(task.isDeleted());
+    }
+
+    @Test
+    public void observeAllStopsAfterCancel() {
+        final List<List<TaskSnapshot>> received = new ArrayList<>();
+        Subscription sub = pool.observeAll(this, received::add);
+        idle();
+        assertEquals(1, received.size()); // 注册后立即推送当前快照
+
+        pool.createTask(device);
+        idle();
+        int afterCreate = received.size();
+        assertTrue(afterCreate >= 2);
+
+        sub.cancel();
+        assertFalse(sub.isActive());
+        pool.createTask("AA:BB:CC:DD:EE:02");
+        idle();
+        assertEquals(afterCreate, received.size());
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void keepConnectedAndDisconnectAfterAreMutuallyExclusive() {
+        QCommand.builder().send("{}").keepConnected().disconnectAfter().build();
     }
 
     private void waitForSendCount(int expected) {
@@ -319,35 +316,10 @@ public class QTaskPoolIntentTest {
         Shadows.shadowOf(Looper.getMainLooper()).idle();
     }
 
-    private static final class TestCallback implements TaskIntentCallback {
-        final List<Record> records = new ArrayList<>();
-
-        @Override
-        public void onFinished(
-                String intentId,
-                TaskIntentStatus status,
-                String result,
-                String error
-        ) {
-            records.add(new Record(status, result, error));
-        }
-    }
-
-    private static final class Record {
-        final TaskIntentStatus status;
-        final String result;
-        final String error;
-
-        Record(TaskIntentStatus status, String result, String error) {
-            this.status = status;
-            this.result = result;
-            this.error = error;
-        }
-    }
-
     private static final class FakeBleAdapter implements BleAdapter {
         int connectCalls;
         int disconnectCalls;
+        int abortCalls;
         ConnectSink connectSink;
         SendSink sendSink;
         final List<String> sentCommands = new ArrayList<>();
@@ -388,6 +360,7 @@ public class QTaskPoolIntentTest {
 
         @Override
         public void abortSend(String mac) {
+            abortCalls++;
         }
 
         @Override

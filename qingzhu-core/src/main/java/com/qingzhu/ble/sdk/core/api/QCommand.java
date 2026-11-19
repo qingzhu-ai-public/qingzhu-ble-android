@@ -9,43 +9,39 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 命令：连接 / 发数据（JSON to JSON）。
+ * 命令：连接或发送。
  *
  * <pre>
- * QCommand.builder().connect().build();                          // 连接（保持，无参）
- * QCommand.builder().connect(paramsMap).build();                 // 连接（带连接参数，如 deviceKey）
+ * QCommand.builder().connect().build();                          // 连接并保持
  * QCommand.builder().send("{\"action\":\"ota\"}", bytes).build(); // 发数据
  * QCommand.builder().send(json).keepConnected().build();         // 发完保持
  * </pre>
  *
- * <p>发数据的第一参是 JSON 字符串，{@code action} 字段告诉协议要干什么（echo/ota/file），
- * 协议自己解析参数。加新指令类型不改 API，只改协议解析。
- *
- * <p>连接参数用 {@code Map<String, Object>}（比固定字符串更灵活）：调用方塞任意 key，
- * 协议在连接前钩子（beforeConnect）读取，core 只承载不翻译。例如设备的一机一密认证密钥
- * {@code {"deviceKey": "xxx"}}。
+ * <p>连接参数不属于命令，由 {@link QTask#setConnectParams(Map)} 设置。
  */
 public final class QCommand {
 
     public enum Kind { CONNECT, SEND }
 
     private final Kind kind;
-    private final String json;          // send 时：JSON 指令
-    private final byte[] data;          // send 时：可选数据（固件/单面图片等单字节）
-    private final Map<String, Object> attachments; // send 时：可选多附件（如多面图片 dataA..dataE）
-    private final boolean keepConnected; // send 时：发完是否保持连接（默认断开）
-    private final Map<String, Object> connectParams; // connect 时：连接参数（可空）
-    private final ReconnectPolicy reconnectPolicy;   // connect 时：意外断开后的自动重连策略（默认 OFF）
+    private final String json;
+    private final byte[] data;
+    private final Map<String, Object> attachments;
+    private final boolean keepConnected;
+    private final boolean disconnectAfter;
+    private final boolean noAck;
+    private final ReconnectPolicy reconnectPolicy;
 
     private QCommand(Kind kind, String json, byte[] data, Map<String, Object> attachments,
-                     boolean keepConnected, Map<String, Object> connectParams,
+                     boolean keepConnected, boolean disconnectAfter, boolean noAck,
                      ReconnectPolicy reconnectPolicy) {
         this.kind = kind;
         this.json = json;
         this.data = data;
         this.attachments = attachments;
         this.keepConnected = keepConnected;
-        this.connectParams = connectParams;
+        this.disconnectAfter = disconnectAfter;
+        this.noAck = noAck;
         this.reconnectPolicy = reconnectPolicy;
     }
 
@@ -54,7 +50,10 @@ public final class QCommand {
     public byte[] data() { return data; }
     public Map<String, Object> attachments() { return attachments; }
     public boolean keepConnected() { return keepConnected; }
-    public Map<String, Object> connectParams() { return connectParams; }
+    /** 是否显式要求发完断开：优先于任务上「保持连接」的期望（设备发完必须断开才生效时使用） */
+    public boolean disconnectAfter() { return disconnectAfter; }
+    /** 是否不要求从机应答（协议是否支持由协议层决定） */
+    public boolean noAck() { return noAck; }
     public ReconnectPolicy reconnectPolicy() { return reconnectPolicy; }
 
     /** 所有附件字节总和（用于判断是否大数据、是否需要请求高连接优先级） */
@@ -92,22 +91,17 @@ public final class QCommand {
         private String json;
         private byte[] data;
         private Map<String, Object> attachments;
-        private boolean keepConnected = false; // 默认发完断开
-        private Map<String, Object> connectParams;
-        private ReconnectPolicy reconnectPolicy = ReconnectPolicy.OFF; // 默认不自动重连
+        private boolean keepConnected;
+        private boolean disconnectAfter;
+        private boolean noAck;
+        private ReconnectPolicy reconnectPolicy = ReconnectPolicy.OFF;
 
-        /** 连接：连上并保持（无参数） */
+        /** 连接并保持 */
         public Builder connect() {
-            return connect(null);
-        }
-
-        /** 连接：连上并保持，带连接参数（如 deviceKey） */
-        public Builder connect(Map<String, Object> params) {
             this.kind = Kind.CONNECT;
             this.json = null;
             this.data = null;
             this.attachments = null;
-            this.connectParams = params;
             return this;
         }
 
@@ -122,25 +116,15 @@ public final class QCommand {
             this.json = json;
             this.data = data;
             this.attachments = null;
-            this.connectParams = null;
             return this;
         }
 
-        /** 发数据（JSON 指令 + 多附件，如多面图片 {@code {"dataA": bytesA, "dataB": bytesB, ...}}） */
+        /** 发数据（JSON 指令 + 多附件，如 {@code {"dataA": bytesA, "dataB": bytesB}}） */
         public Builder send(String json, Map<String, Object> attachments) {
             this.kind = Kind.SEND;
             this.json = json;
             this.data = null;
             this.attachments = attachments;
-            this.connectParams = null;
-            return this;
-        }
-
-        /** 发数据时附加连接参数（如设备的一机一密认证密钥 {@code {"deviceKey": "xxx"}}）：短连接
-         *  连上后认证需要，core 只承载不翻译，协议在 beforeConnect 读取。{@link #connect(Map)} 已内置，
-         *  此方法主要用于 {@link #send(String)} 系列需要带连接参数的场景。 */
-        public Builder connectParams(Map<String, Object> params) {
-            this.connectParams = params;
             return this;
         }
 
@@ -152,12 +136,17 @@ public final class QCommand {
 
         /** 发完断开连接（默认） */
         public Builder disconnectAfter() {
-            this.keepConnected = false;
+            this.disconnectAfter = true;
             return this;
         }
 
-        /** 连接意外断开后的自动重连策略（默认 {@link ReconnectPolicy#OFF} 不重连；
-         *  {@link ReconnectPolicy#forever} 无限重连，适合「设备可能还要开机/进范围」的场景） */
+        /** 不要求从机应答（仅部分协议支持） */
+        public Builder noAck() {
+            this.noAck = true;
+            return this;
+        }
+
+        /** 连接意外断开后的自动重连策略（默认 {@link ReconnectPolicy#OFF}） */
         public Builder reconnect(ReconnectPolicy reconnectPolicy) {
             this.reconnectPolicy = reconnectPolicy;
             return this;
@@ -167,7 +156,11 @@ public final class QCommand {
             if (kind == null) {
                 throw new IllegalStateException("命令未指定：connect() 或 send(json)");
             }
-            return new QCommand(kind, json, data, attachments, keepConnected, connectParams, reconnectPolicy);
+            if (keepConnected && disconnectAfter) {
+                throw new IllegalStateException("keepConnected() 与 disconnectAfter() 互斥，只能选其一");
+            }
+            return new QCommand(kind, json, data, attachments, keepConnected, disconnectAfter,
+                    noAck, reconnectPolicy);
         }
     }
 }

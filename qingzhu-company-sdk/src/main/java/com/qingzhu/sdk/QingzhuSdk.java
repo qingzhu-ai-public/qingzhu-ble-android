@@ -9,6 +9,8 @@ import com.qingzhu.ble.sdk.core.QSdk;
 import com.qingzhu.ble.sdk.core.api.QCommand;
 import com.qingzhu.ble.sdk.core.api.QTask;
 import com.qingzhu.ble.sdk.core.api.ScanOptions;
+import com.qingzhu.ble.sdk.core.api.Subscription;
+import com.qingzhu.ble.sdk.core.api.TaskSnapshot;
 import com.qingzhu.ble.sdk.core.common.QLog;
 import com.qingzhu.ble.sdk.core.device.QDevice;
 import com.qingzhu.ble.sdk.core.protocol.ProtocolPlugin;
@@ -32,7 +34,8 @@ import java.util.List;
  * <pre>
  *   QingzhuSdk.init(context);
  *   QingzhuSdk.startScan(devices -> showList(devices));
- *   QingzhuSdk.submit(mac, QCommand.builder().send("{\"action\":\"echo\"}").build());
+ *   QTask task = QingzhuSdk.createTask(mac);
+ *   task.send(QCommand.builder().send("{\"action\":\"echo\"}").build(), r -&gt; handle(r));
  * </pre>
  *
  * <p>要接入自己的协议：实现 {@link ProtocolPlugin} 后调用 {@link #registerProtocol} 即可，
@@ -106,42 +109,39 @@ public final class QingzhuSdk {
 
     // ---- 任务 ----
 
-    /** 只给 mac 的占位任务：内核自己寻人，找到后自动执行命令 */
-    public static QTask submit(String deviceMac, QCommand command) {
-        return QSdk.getInstance().submit(deviceMac, command);
+    /** 创建任务：该设备已有任务则先删除，再新建。需要复用已有任务时使用 {@link #getTask}。 */
+    public static QTask createTask(String mac) {
+        return QSdk.getInstance().createTask(mac);
     }
 
-    /** 扫描到的设备直接提交任务 */
-    public static QTask submit(QDevice device, QCommand command) {
-        return QSdk.getInstance().submit(device, command);
+    /** 用扫描到的设备创建任务：该设备已有任务则先删除，再新建。 */
+    public static QTask createTask(QDevice device) {
+        return QSdk.getInstance().createTask(device);
     }
 
-    /**
-     * 开始一轮批量任务，提交完成后调用 {@link QSdk.Batch#finish()}。
-     * 批量结束会自动汇总任务终态并回灌自动并发学习。
-     */
-    public static QSdk.Batch beginBatch() {
-        return QSdk.getInstance().beginBatch();
+    /** 只查询，不创建；该设备没有任务时返回 null。 */
+    public static QTask getTask(String mac) {
+        return QSdk.getInstance().getTask(mac);
     }
 
-    /** 批量配置：所有任务终态后回调汇总结果，用于判断是否退出配置页 */
-    public static QSdk.Batch beginBatch(QSdk.BatchListener listener) {
-        return QSdk.getInstance().beginBatch(listener);
+    /** 删除该设备的任务（取消当前操作、断开连接、从任务池移除）；不存在则忽略。 */
+    public static void deleteTask(String mac) {
+        QSdk.getInstance().deleteTask(mac);
     }
 
-    /** 任务池句柄（list / get / clear） */
-    public static QSdk.Tasks getTasks() {
-        return QSdk.getInstance().getTasks();
+    /** 观察所有任务：注册后立即推送一次当前快照，之后每次变化回调不可变快照列表。 */
+    public static Subscription observeAll(Object owner, QSdk.TaskListListener listener) {
+        return QSdk.getInstance().observeAll(owner, listener);
     }
 
-    /** 订阅任务池：状态一变就回调全量快照 */
-    public static void subscribe(QSdk.TaskPoolListener listener) {
-        QSdk.getInstance().subscribe(listener);
+    /** 当前所有任务的不可变快照 */
+    public static List<TaskSnapshot> snapshots() {
+        return QSdk.getInstance().snapshots();
     }
 
     // ---- 调度旋钮 ----
 
-    /** 同时连接数：0 = 自动学习（默认），1-N = 手动（手动模式下批量结果仍会记入学习，但不覆盖手动值） */
+    /** 同时连接数：0 = 自动（默认），1-N = 手动 */
     public static void setMaxConnections(int n) {
         QSdk.getInstance().setMaxConnections(n);
     }
@@ -156,7 +156,7 @@ public final class QingzhuSdk {
         QSdk.getInstance().setMaxRetries(n);
     }
 
-    /** 每台设备最多排队多少条待发送意图，默认 8；0 表示忙碌时不排队 */
+    /** 每台设备最多排队多少条待执行命令，默认 8；0 表示忙碌时直接失败 */
     public static void setMaxPendingIntents(int n) {
         QSdk.getInstance().setMaxPendingIntents(n);
     }

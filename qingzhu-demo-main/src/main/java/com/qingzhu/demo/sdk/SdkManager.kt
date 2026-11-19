@@ -86,10 +86,11 @@ object SdkManager {
             }
         })
 
-        // 任务池订阅：状态一变推全量快照。
-        QingzhuSdk.subscribe { tasks ->
-            this@SdkManager.tasks = tasks
-            taskListeners.forEach { it(tasks) }
+        // 任务池订阅：状态一变推全量任务（快照只用来触发刷新，列表项仍取任务句柄，便于展示设备信息与操作）
+        QingzhuSdk.observeAll(this) { snapshots ->
+            val list = snapshots.mapNotNull { QingzhuSdk.getTask(it.deviceMac()) }
+            this@SdkManager.tasks = list
+            taskListeners.forEach { it(list) }
         }
 
         // 扫描状态订阅：扫描中/已停止（定时超时），UI 据此显示滚动图标 + 文字
@@ -151,14 +152,20 @@ object SdkManager {
 
     // ===== 操作 =====
 
-    /** 扫描到的设备加任务 */
+    /** 扫描到的设备加任务：该设备已有任务则复用，避免静默替换正在使用的任务 */
     fun submit(device: QDevice, command: QCommand?) {
-        QingzhuSdk.submit(device, command)
+        val task = QingzhuSdk.getTask(device.mac) ?: QingzhuSdk.createTask(device)
+        if (command != null) {
+            task.send(command, null)
+        }
     }
 
-    /** 只给 mac（占位任务：系统自己找） */
+    /** 只给 mac（占位任务：系统自己找）；已有任务则复用 */
     fun submit(mac: String, command: QCommand?) {
-        QingzhuSdk.submit(mac, command)
+        val task = QingzhuSdk.getTask(mac) ?: QingzhuSdk.createTask(mac)
+        if (command != null) {
+            task.send(command, null)
+        }
     }
 
     /** 缓存里的同时连接数设置：0 = 自动学习，1-7 = 手动指定 */

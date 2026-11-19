@@ -20,7 +20,7 @@ import android.widget.Toast
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.qingzhu.ble.sdk.core.api.QCommand
 import com.qingzhu.ble.sdk.core.api.QTask
-import com.qingzhu.ble.sdk.core.api.TaskIntentResult
+import com.qingzhu.ble.sdk.core.api.TaskStage
 
 /**
  * 命令选择弹框（扫描页「添加到任务」/ 任务页「执行」「发数据」/ 批量操作页共用）。
@@ -43,18 +43,16 @@ object CommandSheet {
     /** 对单个任务执行命令 */
     fun show(ctx: Context, task: QTask, alreadyConnected: Boolean) {
         show(ctx, task.deviceMac(), { command ->
-            when (task.executeIntent(command)) {
-                TaskIntentResult.QUEUED ->
-                    Toast.makeText(ctx, "已排队，当前操作完成后执行", Toast.LENGTH_SHORT).show()
-                TaskIntentResult.ALREADY_SATISFIED ->
-                    Toast.makeText(ctx, "连接已经满足", Toast.LENGTH_SHORT).show()
-                TaskIntentResult.IN_PROGRESS ->
-                    Toast.makeText(ctx, "当前操作进行中，已合并意图", Toast.LENGTH_SHORT).show()
-                TaskIntentResult.BUSY ->
-                    Toast.makeText(ctx, "待办已满，请稍后再试", Toast.LENGTH_SHORT).show()
-                TaskIntentResult.CLOSED ->
-                    Toast.makeText(ctx, "任务已删除", Toast.LENGTH_SHORT).show()
-                TaskIntentResult.STARTED -> Unit
+            task.send(command) { result ->
+                if (!result.isSuccess) {
+                    val msg = when (result.stage()) {
+                        TaskStage.BUSY -> "待办已满，请稍后再试"
+                        TaskStage.CLOSED -> "任务已删除"
+                        TaskStage.CANCEL, TaskStage.DELETE -> "已取消"
+                        else -> "失败：${result.error()}"
+                    }
+                    Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()
+                }
             }
         }, alreadyConnected)
     }

@@ -5,10 +5,16 @@ package com.qingzhu.ble.sdk.core.kernel;
 
 import com.qingzhu.ble.sdk.core.api.QCommand;
 import com.qingzhu.ble.sdk.core.api.QTask;
-import com.qingzhu.ble.sdk.core.api.TaskIntentResult;
+import com.qingzhu.ble.sdk.core.api.Subscription;
+import com.qingzhu.ble.sdk.core.api.TaskCallback;
+import com.qingzhu.ble.sdk.core.api.TaskObserver;
 import com.qingzhu.ble.sdk.core.api.TaskOutcome;
+import com.qingzhu.ble.sdk.core.api.TaskSnapshot;
 import com.qingzhu.ble.sdk.core.api.TaskState;
 import com.qingzhu.ble.sdk.core.device.QDevice;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * {@link QTask} 的实现：一台设备在任务池里的状态载体。
@@ -49,6 +55,12 @@ final class TaskImpl implements QTask {
     private volatile boolean waitingForTransfer;
     /** 是否已经删除；删除后的迟到调用不能再进入任务池 */
     private volatile boolean deleted;
+    /** 连接参数（由 setConnectParams 写入，连接时透传给协议） */
+    private volatile Map<String, Object> connectParams;
+    /** 当前操作开始前链路是否已连接：cancel 据此决定回到已连接还是未连接 */
+    private volatile boolean connectedBeforeOp;
+    /** 任务级状态观察者 */
+    private final ListenerRegistry<TaskObserver> observers = new ListenerRegistry<>();
     /** 同一设备的待发送意图，有界 FIFO */
     private final PendingIntentQueue<QueuedIntent> pendingIntents = new PendingIntentQueue<>();
     /** 当前正在发送的意图（带命令级 ID / 回调） */
@@ -114,8 +126,32 @@ final class TaskImpl implements QTask {
     public boolean isDeleted() { return deleted; }
 
     @Override
-    public TaskIntentResult executeIntent(QCommand command, com.qingzhu.ble.sdk.core.api.TaskIntentCallback callback) {
-        return pool.execute(this, command, callback);
+    public void send(QCommand command, TaskCallback callback) {
+        pool.send(this, command, callback);
+    }
+
+    @Override
+    public void connect(TaskCallback callback) {
+        pool.send(this, QCommand.builder().connect().build(), callback);
+    }
+
+    @Override
+    public void disconnect() { pool.disconnect(this); }
+
+    @Override
+    public void setConnectParams(Map<String, Object> params) {
+        this.connectParams = params == null ? null : new HashMap<>(params);
+    }
+
+    @Override
+    public Subscription observe(Object owner, TaskObserver observer) {
+        if (deleted || observer == null) {
+            return new Subscription() {
+                @Override public void cancel() { }
+                @Override public boolean isActive() { return false; }
+            };
+        }
+        return observers.add(owner, observer);
     }
 
     @Override
@@ -166,6 +202,16 @@ final class TaskImpl implements QTask {
     boolean isWaitingForTransfer() { return waitingForTransfer; }
     void setWaitingForTransfer(boolean waiting) { this.waitingForTransfer = waiting; }
     void markDeleted() { this.deleted = true; }
+    Map<String, Object> connectParams() { return connectParams; }
+    boolean connectedBeforeOp() { return connectedBeforeOp; }
+    void setConnectedBeforeOp(boolean connected) { this.connectedBeforeOp = connected; }
+    ListenerRegistry<TaskObserver> observers() { return observers; }
+
+    /** 生成当前不可变快照 */
+    TaskSnapshot snapshot() {
+        return new TaskSnapshot(id, deviceMac, currentMac, state, outcome, getProgress(),
+                sentBytes, totalBytes, result, error, pendingIntents.size());
+    }
     boolean offerPendingIntent(QueuedIntent intent, int maxSize) {
         return pendingIntents.offer(intent, maxSize);
     }

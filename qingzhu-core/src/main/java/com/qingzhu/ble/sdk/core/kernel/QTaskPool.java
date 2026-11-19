@@ -5,10 +5,13 @@ package com.qingzhu.ble.sdk.core.kernel;
 
 import com.qingzhu.ble.sdk.core.api.QCommand;
 import com.qingzhu.ble.sdk.core.api.QTask;
-import com.qingzhu.ble.sdk.core.api.TaskIntentCallback;
-import com.qingzhu.ble.sdk.core.api.TaskIntentResult;
-import com.qingzhu.ble.sdk.core.api.TaskIntentStatus;
+import com.qingzhu.ble.sdk.core.api.Subscription;
+import com.qingzhu.ble.sdk.core.api.TaskCallback;
+import com.qingzhu.ble.sdk.core.api.TaskObserver;
 import com.qingzhu.ble.sdk.core.api.TaskOutcome;
+import com.qingzhu.ble.sdk.core.api.TaskResult;
+import com.qingzhu.ble.sdk.core.api.TaskSnapshot;
+import com.qingzhu.ble.sdk.core.api.TaskStage;
 import com.qingzhu.ble.sdk.core.api.TaskState;
 import com.qingzhu.ble.sdk.core.ble.BleAdapter;
 import com.qingzhu.ble.sdk.core.common.QLog;
@@ -61,7 +64,10 @@ public final class QTaskPool {
     private final AtomicLong intentSeq = new AtomicLong();
 
     private volatile Semaphore transferGate = new Semaphore(DEFAULT_MAX_TRANSFERS);
-    private volatile Runnable changeListener;
+    /** 按 mac（大写）索引：createTask / getTask / deleteTask 统一经此解析，避免同一设备产生两个任务 */
+    private final Map<String, TaskImpl> byMac = new ConcurrentHashMap<>();
+    /** 池级观察者：任务增删或状态变化时回调全量不可变快照 */
+    private final ListenerRegistry<PoolObserver> poolObservers = new ListenerRegistry<>();
     /** 任务需要扫描（寻人 / 连接重寻址）时回调，由上层（QSdk）响应自动开扫描 */
     private volatile Runnable scanRequiredListener;
 
@@ -74,9 +80,30 @@ public final class QTaskPool {
         this.maxRetries = maxRetries;
     }
 
-    /** 任务池状态变化（增删/状态流转）时回调，用于订阅全量快照 */
-    public void setChangeListener(Runnable listener) {
-        this.changeListener = listener;
+    /** 池级观察者回调（在主线程调用） */
+    public interface PoolObserver {
+        void onChanged(List<TaskSnapshot> snapshots);
+    }
+
+    /** 观察所有任务：注册后立即推送一次当前快照。owner 被回收或 Subscription.cancel() 后不再回调。 */
+    public Subscription observeAll(Object owner, PoolObserver observer) {
+        Subscription sub = poolObservers.add(owner, observer);
+        final List<TaskSnapshot> current = snapshots();
+        main.post(() -> {
+            if (sub.isActive()) {
+                observer.onChanged(current);
+            }
+        });
+        return sub;
+    }
+
+    /** 当前所有任务的不可变快照 */
+    public List<TaskSnapshot> snapshots() {
+        List<TaskSnapshot> out = new java.util.ArrayList<>();
+        for (TaskImpl t : tasks) {
+            out.add(t.snapshot());
+        }
+        return out;
     }
 
     /** 任务池需要扫描（寻人/重寻址）时的回调：上层据此自动开启扫描，不依赖 UI 页面是否在扫描页 */
@@ -102,52 +129,118 @@ public final class QTaskPool {
 
     // ============ 提交任务 ============
 
-    /** 只给 mac（占位任务：没 ID，先寻人）。同 mac 已有任务则幂等复用，不新建。 */
-    public QTask submit(String deviceMac, QCommand command) {
-        String identity = deviceMac == null ? "" : deviceMac.toUpperCase(java.util.Locale.US);
-        TaskImpl existing = byIdentity.get(identity);
-        if (existing != null) {
-            return reuseExisting(existing, command);
+    // ============ 创建 / 查询 / 删除任务 ============
+
+    private static String macKey(String mac) {
+        return mac == null ? "" : mac.toUpperCase(java.util.Locale.US);
+    }
+
+    /** 只给 mac：先删除该设备已有任务，再新建一个（占位任务，用到时才寻人）。 */
+    public QTask createTask(String deviceMac) {
+        return createTask(macKey(deviceMac), deviceMac, null);
+    }
+
+    /** 扫描到的设备：先删除该设备已有任务，再新建一个。 */
+    public QTask createTask(QDevice device) {
+        return createTask(device.getStableId(), device.getMac(), device);
+    }
+
+    /** 只查询，不创建；不存在返回 null。 */
+    public QTask getTask(String mac) {
+        return resolve(mac);
+    }
+
+    /** 删除该设备的任务（不存在则忽略）。 */
+    public void deleteTask(String mac) {
+        TaskImpl t = resolve(mac);
+        if (t != null) {
+            delete(t);
         }
-        TaskImpl task = new TaskImpl(nextId(), deviceMac, null, this, identity);
+    }
+
+    /** 先按 mac 查（含设备换址后的最新地址），未命中再按 identityKey 查。 */
+    private TaskImpl resolve(String mac) {
+        String key = macKey(mac);
+        TaskImpl t = byMac.get(key);
+        if (t == null) {
+            t = byIdentity.get(key);
+        }
+        return (t != null && !t.isDeleted()) ? t : null;
+    }
+
+    private QTask createTask(String identity, String mac, QDevice device) {
+        TaskImpl old = resolve(mac);
+        if (old == null) {
+            old = byIdentity.get(identity);
+        }
+        if (old != null) {
+            delete(old);
+        }
+        TaskImpl task = new TaskImpl(nextId(), mac, device, this, identity);
         add(task);
         byIdentity.put(identity, task);
-        if (command != null) {
-            execute(task, command, null);
-        }
+        indexMac(task, mac);
         notifyChanged();
         return task;
     }
 
-    /** 扫描到的设备（有 ID）。同 stableId 已有任务则幂等复用，不新建。 */
-    public QTask submit(QDevice device, QCommand command) {
-        String identity = device.getStableId();
-        TaskImpl existing = byIdentity.get(identity);
-        if (existing != null) {
-            return reuseExisting(existing, command);
+    private void indexMac(TaskImpl task, String mac) {
+        if (mac != null && !mac.isEmpty()) {
+            byMac.put(macKey(mac), task);
         }
-        TaskImpl task = new TaskImpl(nextId(), device.getMac(), device, this, identity);
-        add(task);
-        byIdentity.put(identity, task);
-        if (command != null) {
-            execute(task, command, null);
-        }
-        notifyChanged();
-        return task;
-    }
-
-    /** 重复提交：返回已有任务；新意图交给统一仲裁，不再直接覆盖正在执行的命令。 */
-    private QTask reuseExisting(TaskImpl task, QCommand command) {
-        if (command != null) {
-            execute(task, command, null);
-        }
-        notifyChanged();
-        return task;
     }
 
     // ============ 任务操作（TaskImpl 委托进来） ============
 
-    TaskIntentResult execute(TaskImpl task, QCommand command, TaskIntentCallback callback) {
+    /** 发送命令：结果经 callback 回调一次（主线程）。 */
+    void send(TaskImpl task, QCommand command, TaskCallback callback) {
+        if (command == null) {
+            postResult(callback, TaskResult.failure(TaskStage.BUSY, "命令为空"));
+            return;
+        }
+        TaskIntentResult accepted = execute(task, command, callback);
+        if (accepted == TaskIntentResult.CLOSED) {
+            postResult(callback, TaskResult.failure(TaskStage.CLOSED, "任务已删除"));
+        } else if (accepted == TaskIntentResult.BUSY) {
+            postResult(callback, TaskResult.failure(TaskStage.BUSY, "待办已满"));
+        } else if (accepted == TaskIntentResult.ALREADY_SATISFIED) {
+            // 已连接时再次 connect：回调已在 execute 内以 SUCCEEDED 处理
+            return;
+        }
+    }
+
+    private void postResult(TaskCallback callback, TaskResult result) {
+        if (callback == null) {
+            return;
+        }
+        main.post(() -> {
+            try {
+                callback.onResult(result);
+            } catch (Throwable t) {
+                QLog.e(TAG, "任务回调异常", t);
+            }
+        });
+    }
+
+    /** 断开连接：有当前操作先取消，再断开；任务保留在池中。 */
+    void disconnect(TaskImpl task) {
+        if (task.isDeleted() || !tasks.contains(task)) {
+            return;
+        }
+        if (task.getState().isRunning()) {
+            cancel(task);
+        }
+        // cancel 会回到「操作开始前」的链路状态：发送前已连接则仍是 CONNECTED。
+        // disconnect 的语义是真正断开，所以这里补一次断开。
+        if (task.getState() == TaskState.CONNECTED) {
+            adapter.disconnect(task.currentMac());
+            task.setState(task.getDevice() != null ? TaskState.READY : TaskState.UNKNOWN);
+        }
+        task.setConnectionDesired(false);
+        notifyChanged();
+    }
+
+    TaskIntentResult execute(TaskImpl task, QCommand command, TaskCallback callback) {
         if (command == null) {
             return TaskIntentResult.BUSY;
         }
@@ -235,7 +328,7 @@ public final class QTaskPool {
     private QueuedIntent newQueuedIntent(
             TaskImpl task,
             QCommand command,
-            TaskIntentCallback callback
+            TaskCallback callback
     ) {
         return new QueuedIntent(
                 task.id() + "-i" + intentSeq.incrementAndGet(),
@@ -244,6 +337,8 @@ public final class QTaskPool {
     }
 
     private void prepareNewCommand(TaskImpl task, QCommand command) {
+        // 记录操作开始前的链路状态：cancel 据此决定回到已连接还是未连接
+        task.setConnectedBeforeOp(task.getState() == TaskState.CONNECTED);
         task.setCommand(command);
         task.resetRetry();
         task.resetProgress();
@@ -261,16 +356,24 @@ public final class QTaskPool {
             String result,
             String error
     ) {
+        finishIntent(intent, status, result, error,
+                status == TaskIntentStatus.CANCELLED ? TaskStage.CANCEL : TaskStage.SEND);
+    }
+
+    private void finishIntent(
+            QueuedIntent intent,
+            TaskIntentStatus status,
+            String result,
+            String error,
+            TaskStage stage
+    ) {
         if (intent == null || intent.callback == null) {
             return;
         }
-        main.post(() -> {
-            try {
-                intent.callback.onFinished(intent.id, status, result, error);
-            } catch (Throwable throwable) {
-                QLog.e(TAG, "意图回调异常 intent=" + intent.id, throwable);
-            }
-        });
+        final TaskResult taskResult = status == TaskIntentStatus.SUCCEEDED
+                ? TaskResult.success(result)
+                : TaskResult.failure(stage, error);
+        postResult(intent.callback, taskResult);
     }
 
     /** 连接成功/失败时结清所有等待连接结果的意图。 */
@@ -279,51 +382,66 @@ public final class QTaskPool {
             TaskIntentStatus status,
             String error
     ) {
+        finishConnectionWaiters(task, status, error,
+                status == TaskIntentStatus.CANCELLED ? TaskStage.CANCEL : TaskStage.CONNECT);
+    }
+
+    private void finishConnectionWaiters(
+            TaskImpl task,
+            TaskIntentStatus status,
+            String error,
+            TaskStage stage
+    ) {
         for (QueuedIntent waiter : task.drainConnectionWaiters()) {
-            finishIntent(waiter, status, null, error);
+            finishIntent(waiter, status, null, error, stage);
         }
     }
 
     /** 任务取消/删除：当前、待办、连接等待者全部标记为取消。 */
-    private void cancelAllIntents(TaskImpl task, String reason) {
-        finishIntent(task.clearCurrentIntent(), TaskIntentStatus.CANCELLED, null, reason);
+    private void cancelAllIntents(TaskImpl task, String reason, TaskStage stage) {
+        finishIntent(task.clearCurrentIntent(), TaskIntentStatus.CANCELLED, null, reason, stage);
         for (QueuedIntent pending : task.drainPendingIntents()) {
-            finishIntent(pending, TaskIntentStatus.CANCELLED, null, reason);
+            finishIntent(pending, TaskIntentStatus.CANCELLED, null, reason, stage);
         }
-        finishConnectionWaiters(task, TaskIntentStatus.CANCELLED, reason);
+        finishConnectionWaiters(task, TaskIntentStatus.CANCELLED, reason, stage);
     }
 
     /** 重试耗尽：当前意图和连接等待者失败，后续待办因为没有开始而取消。 */
-    private void failAllIntents(TaskImpl task, String reason) {
-        finishIntent(task.clearCurrentIntent(), TaskIntentStatus.FAILED, null, reason);
+    private void failAllIntents(TaskImpl task, String reason, TaskStage stage) {
+        finishIntent(task.clearCurrentIntent(), TaskIntentStatus.FAILED, null, reason, stage);
         for (QueuedIntent pending : task.drainPendingIntents()) {
-            finishIntent(pending, TaskIntentStatus.CANCELLED, null, "前序命令失败：" + reason);
+            finishIntent(pending, TaskIntentStatus.CANCELLED, null,
+                    "前序命令失败：" + reason, TaskStage.CANCEL);
         }
-        finishConnectionWaiters(task, TaskIntentStatus.FAILED, reason);
+        finishConnectionWaiters(task, TaskIntentStatus.FAILED, reason, stage);
     }
 
     void cancel(TaskImpl task) {
-        if (!task.getState().isRunning()) {
+        if (task.isDeleted() || !task.getState().isRunning()) {
             return;
         }
         TaskState state = task.getState();
         if (task.getOutcome() == TaskOutcome.NONE) {
             task.setOutcome(TaskOutcome.CANCELLED);
         }
-        cancelAllIntents(task, "任务已取消");
+        cancelAllIntents(task, "任务已取消", TaskStage.CANCEL);
         if (state == TaskState.SEARCHING) {
             searching.remove(task.deviceMac());
         }
+        // 回到操作开始前的链路状态：开始前已连接且正在发送 -> 只中止发送，保持连接；
+        // 其余情形（寻人/排队/建连/重试等待，或开始前未连接）-> 断开回到未连接。
+        boolean backToConnected = state == TaskState.SENDING && task.connectedBeforeOp();
         if (state == TaskState.SENDING) {
             adapter.abortSend(task.currentMac());
             transferGate.release();
         }
-        if (state == TaskState.CONNECTING
+        if (!backToConnected
+                && (state == TaskState.CONNECTING
                 || state == TaskState.CONNECTED
-                || state == TaskState.SENDING) {
+                || state == TaskState.SENDING)) {
             adapter.disconnect(task.currentMac());
         }
-        task.setConnectionDesired(false);
+        task.setConnectionDesired(backToConnected);
         task.setWaitingForTransfer(false);
         task.setCommand(null);
         task.resetProgress();
@@ -332,17 +450,24 @@ public final class QTaskPool {
         // 递增发送代次：丢弃取消时仍在执行、尚未返回的发送回调（onProgress/onDone/onFailed），
         // 否则它们迟到后会把进度/状态又改回旧值
         task.bumpSendGeneration();
-        task.setState(task.getDevice() != null ? TaskState.READY : TaskState.UNKNOWN);
+        if (backToConnected) {
+            task.setState(TaskState.CONNECTED);
+        } else {
+            task.setState(task.getDevice() != null ? TaskState.READY : TaskState.UNKNOWN);
+        }
         notifyChanged();
     }
 
     void delete(TaskImpl task) {
+        if (task.isDeleted()) {
+            return;
+        }
         TaskState state = task.getState();
         if (task.getOutcome() == TaskOutcome.NONE) {
             task.setOutcome(TaskOutcome.CANCELLED);
         }
         task.markDeleted();
-        cancelAllIntents(task, "任务已删除");
+        cancelAllIntents(task, "任务已删除", TaskStage.DELETE);
         task.setConnectionDesired(false);
         task.setWaitingForTransfer(false);
         if (state == TaskState.SEARCHING) {
@@ -360,8 +485,11 @@ public final class QTaskPool {
         task.setCommand(null);
         tasks.remove(task);
         byId.remove(task.id());
-        byIdentity.remove(task.identityKey());
+        byIdentity.remove(task.identityKey(), task);
+        byMac.values().removeIf(t -> t == task);
         notifyChanged();
+        // 删除后任务不再保留：通知完最后一次变化后清空任务级观察者
+        main.post(() -> task.observers().clear());
     }
 
     /** 一键清空所有任务（按各自状态清理） */
@@ -390,6 +518,7 @@ public final class QTaskPool {
                         TaskImpl task = searching.remove(e.getKey());
                         if (task != null) {
                             task.setDevice(d);
+                            indexMac(task, d.getMac());
                             task.resetRetry();
                             startQueued(task);
                         }
@@ -410,6 +539,7 @@ public final class QTaskPool {
                 if (d.getStableId().equals(cur.getStableId()) && !d.getMac().equalsIgnoreCase(cur.getMac())) {
                     task.setDevice(d);
                     task.setCurrentMac(d.getMac());
+                    indexMac(task, d.getMac());
                     notifyChanged();
                     break;
                 }
@@ -480,7 +610,7 @@ public final class QTaskPool {
         QCommand cmd = task.command();
         ReconnectPolicy rp = (cmd != null && cmd.reconnectPolicy() != null)
                 ? cmd.reconnectPolicy() : ReconnectPolicy.OFF;
-        adapter.connect(task.getDevice(), toConnectParams(task.command()), rp, new BleAdapter.ConnectSink() {
+        adapter.connect(task.getDevice(), toConnectParams(task), rp, new BleAdapter.ConnectSink() {
             @Override
             public void onConnected(String mac) {
                 handleConnected(task, mac);
@@ -493,10 +623,10 @@ public final class QTaskPool {
         });
     }
 
-    /** 把 QCommand 的连接参数 Map 转成 ConnectParams（core 只承载不翻译，协议在 beforeConnect 读） */
-    private ConnectParams toConnectParams(QCommand cmd) {
+    /** 把任务上的连接参数 Map 转成 ConnectParams（core 只承载不翻译，协议在 beforeConnect 读） */
+    private ConnectParams toConnectParams(TaskImpl task) {
         ConnectParams cp = new ConnectParams();
-        Map<String, Object> m = cmd != null ? cmd.connectParams() : null;
+        Map<String, Object> m = task != null ? task.connectParams() : null;
         if (m != null) {
             for (Map.Entry<String, Object> e : m.entrySet()) {
                 cp.put(e.getKey(), e.getValue());
@@ -509,13 +639,19 @@ public final class QTaskPool {
         if (task.isDeleted()
                 || !tasks.contains(task)
                 || task.getState() != TaskState.CONNECTING) {
-            adapter.disconnect(mac);
+            // 同一设备的连接可能被新任务合并共享（连接进行中再次请求会合并回调）。
+            // 已删除的旧任务不能把这条共享链路断掉，否则新任务以为已连接、链路却已释放。
+            TaskImpl other = byMac.get(macKey(mac));
+            if (other == null || other == task || other.isDeleted()) {
+                adapter.disconnect(mac);
+            }
             return;
         }
         // 连接成功后，重寻址可能把 bleMac 换成了新地址，用连接实际成功的地址更新 currentMac，
         // 后续 disconnect / send 都认这个最新地址，不再用提交时过期的 bleMac
         if (mac != null && !mac.isEmpty()) {
             task.setCurrentMac(mac);
+            indexMac(task, mac);
         }
         QCommand cmd = task.command();
         task.setState(TaskState.CONNECTED);
@@ -641,8 +777,10 @@ public final class QTaskPool {
         task.setResult(result); // 记录从机回显的数据，供 UI 展示
         QueuedIntent completedIntent = task.clearCurrentIntent();
         QCommand finished = task.command();
-        boolean keepConnection = task.isConnectionDesired()
-                || (finished != null && finished.keepConnected());
+        // 命令显式要求「发完断开」优先于任务上「保持连接」的期望
+        boolean keepConnection = (finished == null || !finished.disconnectAfter())
+                && (task.isConnectionDesired()
+                || (finished != null && finished.keepConnected()));
         task.setCommand(null);
         task.resetProgress();
         task.resetRetry();
@@ -656,6 +794,7 @@ public final class QTaskPool {
             task.setState(TaskState.CONNECTED);
         } else {
             adapter.disconnect(task.currentMac());
+            task.setConnectionDesired(false);
             task.setState(TaskState.READY);
         }
         notifyChanged();
@@ -721,7 +860,8 @@ public final class QTaskPool {
             // 超限：当前意图失败，所有待办也一起终止，回到待机等待新的显式意图
             int cancelledPending = task.pendingIntentCount();
             task.setOutcome(failureOutcome);
-            failAllIntents(task, message);
+            failAllIntents(task, message, failureOutcome == TaskOutcome.CONNECT_FAILED
+                    ? TaskStage.CONNECT : TaskStage.SEND);
             task.setConnectionDesired(false);
             task.setWaitingForTransfer(false);
             task.setError(cancelledPending > 0
@@ -746,10 +886,19 @@ public final class QTaskPool {
         return "t" + idSeq.incrementAndGet();
     }
 
+    /** 状态变化：在主线程生成快照并派发给任务级与池级观察者 */
     private void notifyChanged() {
-        Runnable l = changeListener;
-        if (l != null) {
-            l.run();
-        }
+        main.post(() -> {
+            for (TaskImpl t : tasks) {
+                if (!t.observers().isEmpty()) {
+                    final TaskSnapshot s = t.snapshot();
+                    t.observers().forEach(o -> o.onChanged(s));
+                }
+            }
+            if (!poolObservers.isEmpty()) {
+                final List<TaskSnapshot> all = snapshots();
+                poolObservers.forEach(o -> o.onChanged(all));
+            }
+        });
     }
 }
