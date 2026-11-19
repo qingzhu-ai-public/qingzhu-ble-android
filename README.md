@@ -10,11 +10,11 @@
 [![Gradle](https://img.shields.io/badge/Gradle-8.13-02303A?logo=gradle&logoColor=white)](https://gradle.org)
 [![Status](https://img.shields.io/badge/Status-Source%20Preview-orange)](https://github.com/qingzhu-ai-public/qingzhu-ble-android)
 
-青竹 BLE Android SDK，以任务为中心，提供扫描、自动寻人、连接、发送、接收、通知、MTU、批量设备调度、意图排队、超时重试和协议插件化能力；内部处理串行建连、传输窗口、地址轮换、心跳、断连恢复和迟到回调，可注册自己的设备协议。
+青竹 BLE Android SDK，以任务为中心，提供扫描、自动寻人、连接、发送、命令排队、取消与删除、超时重试和协议插件化能力；内部处理串行建连、传输窗口、地址轮换、心跳、断连恢复和迟到回调，可注册自己的设备协议。
 
 > **你只需要把现有产品的设备协议告诉 AI，让它帮你接入 `ProtocolPlugin`。**
 >
-> 扫描、连接、服务发现、GATT 收发、超时、重试、意图队列、批量调度和异常恢复，底层已经处理好。你不需要再为每个产品重写一套 BLE 状态机。
+> 扫描、连接、服务发现、GATT 收发、超时、重试、命令队列、多设备调度和异常恢复，底层已经处理好。你不需要再为每个产品重写一套 BLE 状态机。
 >
 > 给 AI 协议文档、帧格式、抓包或示例数据即可，不要让它猜协议。具体提示词见 [用 AI 接入](#0-用-ai-接入推荐先做)。
 
@@ -35,16 +35,16 @@ Qingzhu-BLE 的出发点不是再写一个薄封装，而是把这两类问题�
 | 设计理念 | 解决的问题 |
 |---|---|
 | **任务式模型** | 业务只表达“这台设备要做什么”，SDK 管扫描、寻人、排队、连接、发送、取消、重试和收尾 |
-| **统一资源调度** | 一个内核拥有扫描、建连、连接容量和传输窗口；串行建连、批量调度和迟到回调治理有唯一落脚点 |
+| **统一资源调度** | 一个内核拥有扫描、建连、连接容量和传输窗口；串行建连、多设备调度和迟到回调治理有唯一落脚点 |
 | **异常治理** | 处理地址轮换、扫描假死、心跳失活、断连恢复、超时重试、取消后的旧回调污染 |
 | **协议插件化** | 公共能力下沉到 core，设备差异上浮为协议插件；新增协议不改内核 |
-| **可诊断性** | 任务自带状态、进度、结果、错误和意图终态，排查时知道卡在哪一步 |
+| **可诊断性** | 任务自带状态、进度、结果、错误，每条命令都有最终结果和失败阶段，排查时知道卡在哪一步 |
 
 这套设计的前提可以用一句话概括：
 
 > BLE 资源在一个进程里是共享的，必须有明确的所有者；否则任何调度策略都无法生效。
 
-因此它不是“又一个 BLE API 复制品”，而是一个面向批量通信和多协议治理的工程化 SDK 实验。
+因此它不是“又一个 BLE API 复制品”，而是一个面向多设备通信和多协议治理的工程化 SDK 实验。
 
 当前仓库仍是源码预览版：核心状态机和公开示例协议已经可构建、可测试，但长期稳定性、机型兼容性和多插件冲突治理仍需继续验证。
 
@@ -68,14 +68,15 @@ Qingzhu-BLE 的出发点不是再写一个薄封装，而是把这两类问题�
   - [2. 配置权限](#2-配置权限)
   - [3. 初始化](#3-初始化)
   - [4. 扫描](#4-扫描)
-  - [5. 提交任务](#5-提交任务)
+  - [5. 创建任务](#5-创建任务)
   - [6. 连接](#6-连接)
   - [7. 发送数据](#7-发送数据)
   - [8. 任务状态与结果](#8-任务状态与结果)
-  - [9. 意图排队与完成回调](#9-意图排队与完成回调)
+  - [9. 命令排队](#9-命令排队)
   - [10. 取消与删除](#10-取消与删除)
   - [11. 多设备调度](#11-多设备调度)
   - [12. 自定义协议](#12-自定义协议)
+- [附录 A：命令模型与 Builder](#附录-a命令模型与-builder真实-api)
 - [构建](#构建)
   - [Fullstack 参考源码](#fullstack-参考源码)
 - [测试](#测试)
@@ -88,7 +89,7 @@ Qingzhu-BLE 的出发点不是再写一个薄封装，而是把这两类问题�
 
 | 角色 | 文件 | 说明 |
 |---|---|---|
-| 主端 | [qingzhu-demo-main-v1.0-debug.apk](downloads/qingzhu-demo-main-v1.0-debug.apk) | 扫描、添加任务、连接、发送、意图队列、调度配置 |
+| 主端 | [qingzhu-demo-main-v1.0-debug.apk](downloads/qingzhu-demo-main-v1.0-debug.apk) | 扫描、添加任务、连接、发送、命令排队、调度配置 |
 | 从端 | [qingzhu-demo-sim-generic-v1.0-debug.apk](downloads/qingzhu-demo-sim-generic-v1.0-debug.apk) | Generic 可编程外设，任意广播 + echo GATT |
 | 从端 | [qingzhu-demo-sim-eddystone-v1.0-debug.apk](downloads/qingzhu-demo-sim-eddystone-v1.0-debug.apk) | Eddystone Beacon + 可连接 GATT 外设 |
 | 校验 | [SHA256SUMS.txt](downloads/SHA256SUMS.txt) | 3 个 APK 的 SHA256 |
@@ -122,21 +123,22 @@ adb install -r downloads/qingzhu-demo-sim-eddystone-v1.0-debug.apk
 
 ## API
 
-* **[QingzhuSdk](qingzhu-company-sdk/src/main/java/com/qingzhu/sdk/QingzhuSdk.java)** - 开源门面，提供初始化、扫描、任务提交、调度配置和协议注册。
+* **[QingzhuSdk](qingzhu-company-sdk/src/main/java/com/qingzhu/sdk/QingzhuSdk.java)** - 开源门面，提供初始化、扫描、任务创建/查询/删除、全局任务观察、调度配置和协议注册。
 * **[QDevice](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/device/QDevice.java)** - 扫描到的设备模型，包含 MAC、名称、RSSI、稳定身份、协议类型和 metadata。
-* **[QCommand](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/api/QCommand.java)** - 连接/发送命令，支持 JSON、字节、多附件、保持连接、连接参数和重连策略。
-* **[QTask](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/api/QTask.java)** - 任务句柄，一台设备对应一个任务，提供状态、进度、结果、错误、取消和删除。
+* **[QCommand](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/api/QCommand.java)** - 连接/发送命令，支持 JSON、字节、多附件、保持连接、发完断开和重连策略。
+* **[QTask](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/api/QTask.java)** - 任务句柄，一台设备对应一个任务，提供发送、连接、断开、取消、删除、状态观察和连接参数设置。
+* **[TaskResult](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/api/TaskResult.java)** / **[TaskStage](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/api/TaskStage.java)** - 单条命令的最终结果，以及失败所处的阶段。
+* **[TaskSnapshot](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/api/TaskSnapshot.java)** - 任务的不可变快照，供 `observeAll` / `observe` 回调。
 * **[TaskState](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/api/TaskState.java)** - 任务状态。
-* **[TaskIntentResult](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/api/TaskIntentResult.java)** - 意图被接收时的立即结果。
-* **[TaskIntentStatus](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/api/TaskIntentStatus.java)** - 单条意图的最终结果。
+* **[Subscription](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/api/Subscription.java)** - 订阅句柄，可提前取消。
 * **[ProtocolPlugin](qingzhu-core/src/main/java/com/qingzhu/ble/sdk/core/protocol/ProtocolPlugin.java)** - 协议插件接口，新设备类型通过它接入。
 
 ## 接入前提示
 
 1. 设备只有一种类型：实现一个 `ProtocolPlugin`，初始化后注册即可。
 2. 设备有多种类型：每种设备一个插件，扫描结果通过 `device.getProtocolType()` 区分。
-3. 只给 MAC 也能提交任务：SDK 会先扫描寻人，找到后自动连接和发送。
-4. 同一台设备只创建一个任务；后续命令通过 `QTask.executeIntent()` 提交。
+3. 只给 MAC 也能创建任务：SDK 会先扫描寻人，找到后自动连接和发送。
+4. 同一台设备同一时刻只有一个有效任务：`createTask` 会替换已有任务，需要复用时用 `getTask`。
 
 ## 接入文档
 
@@ -184,8 +186,8 @@ README
   → QingzhuSdk（门面 API）
   → QTask / QCommand（任务和命令）
   → ProtocolPlugin（协议扩展）
-  → QSdk（扫描、批次、订阅）
-  → QTaskPool（意图、队列、重试）
+  → QSdk（扫描、任务创建、观察者）
+  → QTaskPool（命令排队、状态机、重试）
 ```
 
 ### 1. 添加依赖
@@ -301,52 +303,63 @@ QingzhuSdk.setScanStateListener(scanning -> {
 });
 ```
 
-### 5. 提交任务
+### 5. 创建任务
 
-已经拿到扫描设备：
-
-```java
-QCommand command = QCommand.builder()
-        .send("{\"action\":\"echo\"}")
-        .build();
-
-QTask task = QingzhuSdk.submit(device, command);
-```
-
-只知道 MAC：
+一台设备对应一个任务。三个入口：
 
 ```java
-QTask task = QingzhuSdk.submit("AA:BB:CC:DD:EE:FF", command);
+QTask task = QingzhuSdk.createTask(device);   // 已经拿到扫描设备
+QTask task = QingzhuSdk.createTask(mac);      // 只知道 MAC
+QTask existing = QingzhuSdk.getTask(mac);     // 只查询，没有则返回 null
+QingzhuSdk.deleteTask(mac);                   // 删除，不存在则忽略
 ```
 
-这种任务会先进入寻人状态，SDK 找到设备后自动连接并发送，不需要业务自己先扫描再连接。
+`createTask` 和 `getTask` 的区别：
 
-同一台设备重复 `submit` 会返回同一个任务，不会创建第二份连接。
+| | `createTask` | `getTask` |
+|---|---|---|
+| 该设备已有任务 | 先删除旧任务，再新建 | 返回已有任务 |
+| 该设备没有任务 | 新建 | 返回 `null` |
+| 旧任务的连接 | 被断开，旧任务之后的调用全部失败 | 不受影响 |
+
+需要在多个页面共享同一台设备的任务时，用 `getTask`，没有再 `createTask`：
+
+```java
+QTask task = QingzhuSdk.getTask(mac);
+if (task == null) {
+    task = QingzhuSdk.createTask(mac);
+}
+```
+
+只给 MAC 时，任务会先进入寻人状态，SDK 找到设备后自动连接，不需要业务自己先扫描再连接。
 
 ### 6. 连接
 
 ```java
-QCommand connect = QCommand.builder()
-        .connect()
-        .build();
-
-QingzhuSdk.submit(mac, connect);
+QTask task = QingzhuSdk.createTask(mac);
+task.setConnectParams(params);           // 可选：连接参数
+task.connect(result -> {
+    if (result.isSuccess()) {
+        // 已连接并保持
+    } else {
+        // result.stage()、result.error()
+    }
+});
 ```
 
-带连接参数：
+连接参数通过 `setConnectParams` 设置，对该任务之后的所有连接生效，由协议插件解释，内核只负责传递。连接参数不属于命令，不能放进 `QCommand`。
+
+`task.connect(callback)` 等同于 `task.send(QCommand.builder().connect().build(), callback)`。
+
+断开连接但保留任务：
 
 ```java
-Map<String, Object> params = new HashMap<>();
-params.put("deviceKey", "your-device-key");
-
-QCommand connect = QCommand.builder()
-        .connect(params)
-        .build();
+task.disconnect();
 ```
 
-连接参数由协议插件解释，内核只负责传递。
-
 ### 7. 发送数据
+
+`task.send(command, callback)` 发送一条命令，结果经 `TaskCallback` 回调一次，回调在主线程。
 
 JSON 指令：
 
@@ -354,6 +367,15 @@ JSON 指令：
 QCommand command = QCommand.builder()
         .send("{\"action\":\"echo\"}")
         .build();
+
+task.send(command, result -> {
+    if (result.isSuccess()) {
+        String echo = result.payload();   // 设备回显，可能为 null
+    } else {
+        TaskStage stage = result.stage(); // 失败所处阶段
+        String error = result.error();
+    }
+});
 ```
 
 JSON + 单块字节：
@@ -376,304 +398,192 @@ QCommand command = QCommand.builder()
         .build();
 ```
 
-发送后保持连接：
+发完是否断开：
 
 ```java
-QCommand command = QCommand.builder()
-        .send("{\"action\":\"echo\"}")
-        .keepConnected()
-        .build();
+QCommand.builder().send(json).keepConnected().build();    // 发完保持连接
+QCommand.builder().send(json).disconnectAfter().build();  // 发完必须断开
 ```
 
-默认发完断开，调用 `keepConnected()` 后保持连接。
+默认行为取决于任务当前是否带"保持连接"期望：任务经 `connect` 连接过则发完保持，否则发完断开。`disconnectAfter()` 优先于这个期望，适合"发完必须断开设备才生效"的设备。同时调用 `keepConnected()` 和 `disconnectAfter()` 会在 `build()` 时抛 `IllegalStateException`。
+
+长连接并允许意外断开后自动重连：
+
+```java
+task.send(QCommand.builder().connect().reconnect(policy).build(), callback);
+```
+
+`reconnect` 默认为 `ReconnectPolicy.OFF`。
 
 ### 8. 任务状态与结果
 
-任务状态只有一个入口：`QingzhuSdk.subscribe()` 推全量任务快照。
+#### 8.1 观察状态
+
+观察所有任务，回调的是不可变的 `TaskSnapshot` 列表，在主线程，注册后立即推送一次当前快照：
 
 ```java
-QingzhuSdk.subscribe(new QSdk.TaskPoolListener() {
-    @Override
-    public void onChanged(List<QTask> tasks) {
-        for (QTask task : tasks) {
-            TaskState state = task.getState();
-            TaskOutcome outcome = task.getOutcome();
-            int progress = task.getProgress();
-            int sent = task.getSentBytes();
-            int total = task.getTotalBytes();
-            String result = task.getResult();
-            String error = task.getError();
-            int pending = task.pendingIntentCount();
-        }
+Subscription sub = QingzhuSdk.observeAll(this, snapshots -> {
+    for (TaskSnapshot s : snapshots) {
+        TaskState state = s.state();
+        TaskOutcome outcome = s.outcome();
+        int progress = s.progress();
+        int sent = s.sentBytes();
+        int total = s.totalBytes();
+        String result = s.result();
+        String error = s.error();
+        int pending = s.pendingCount();
     }
 });
+
+sub.cancel();  // 提前取消订阅；传入 owner 的订阅在 owner 被回收后也会自动失效
 ```
 
-`TaskState` 回答「现在在做什么」，`TaskOutcome / result / error` 回答「上一次结果是什么」。SDK 没有单独的 `FAILED` 状态；失败后任务会回到 `READY` 或 `UNKNOWN`，失败类型和原因放在终态字段里。
-
-| 状态 | 含义 | Demo 里怎么显示 |
-|---|---|---|
-| `UNKNOWN` | 只有 MAC，还没找到设备 | 未知设备 |
-| `READY` | 已找到设备，空闲、未连接，等命令 | 就绪 |
-| `SEARCHING` | 占位任务正在扫描寻人 | 寻找中 |
-| `QUEUED` | 等连接窗口、传输窗口，或处在重试等待 | 排队中 |
-| `CONNECTING` | 正在建立 GATT 连接 | 连接中 |
-| `CONNECTED` | 已连接，空闲或保持连接 | 已连接 |
-| `SENDING` | 正在发数据，看 `progress / sentBytes / totalBytes` | 发送中 + 进度条 + 实时速率 |
-
-#### 8.1 成功、失败、取消怎么判断
-
-| UI 语义 | 判断条件 | 说明 |
-|---|---|---|
-| 还没执行过 | `state == UNKNOWN/READY` 且 `outcome == NONE` | 新任务或空闲任务 |
-| 正在执行 | `state == SEARCHING/QUEUED/CONNECTING/SENDING` | 不要根据 `result` 判成功 |
-| 发送中 | `state == SENDING` | 用 `getProgress()`、`getSentBytes()`、`getTotalBytes()` |
-| 有排队命令 | `pendingIntentCount() > 0` | 显示「待执行 N」 |
-| 发送成功 | `state != SENDING` 且 `outcome == SUCCEEDED` 且 `error == null` | `result` 是设备回显，可能为 null |
-| 保持连接且成功 | `state == CONNECTED` 且 `outcome == SUCCEEDED` | 发完没断开 |
-| 连接阶段失败 | `state == READY/UNKNOWN` 且 `outcome == CONNECT_FAILED` | 寻人超时、连接失败、认证失败等 |
-| 发送/业务失败 | `state == READY/UNKNOWN` 且 `outcome == OPERATION_FAILED` | 已连接后发送失败、重试耗尽 |
-| 取消 / 删除 | `outcome == CANCELLED` | 用户取消、删除，或前序失败导致待办取消 |
-| 失败原因 | `error != null` | 例如 `查询失败 reason=129`、`寻人超时` |
-| 设备回显 | `result != null` | 成功也不一定有回显，不能只用 `result` 判成功 |
-
-> 关键：**`result != null` 不等于成功，`error == null` 也不等于成功**。
-> 成功/失败的权威字段是 `TaskOutcome`；`state` 只说明当前阶段。
-
-#### 8.2 一个可直接复制的判断函数
+只关心某一个任务：
 
 ```java
-static String describeTask(QTask t) {
-    TaskState s = t.getState();
-    TaskOutcome o = t.getOutcome();
-
-    if (s == TaskState.SENDING) {
-        return "发送中 " + t.getProgress() + "%"
-                + (t.pendingIntentCount() > 0
-                    ? " · 待执行 " + t.pendingIntentCount() : "");
-    }
-    if (s == TaskState.CONNECTED) {
-        return o == TaskOutcome.SUCCEEDED && t.getResult() != null
-                ? "已连接 · 回显：" + t.getResult()
-                : "已连接 · 保持连接中";
-    }
-    if (s == TaskState.SEARCHING) return "寻找设备";
-    if (s == TaskState.QUEUED) return "排队中 / 重试等待";
-    if (s == TaskState.CONNECTING) return "连接中";
-
-    // READY / UNKNOWN：用终态字段解释「上一次结果」
-    switch (o) {
-        case SUCCEEDED:
-            return t.getResult() != null
-                    ? "发送成功 · 回显：" + t.getResult()
-                    : "发送成功";
-        case CONNECT_FAILED:
-            return "连接失败：" + t.getError();
-        case OPERATION_FAILED:
-            return "发送失败：" + t.getError();
-        case CANCELLED:
-            return "已取消：" + t.getError();
-        case NONE:
-        default:
-            return s == TaskState.UNKNOWN ? "未知设备 / 未找到" : "就绪 / 未连接";
-    }
-}
+Subscription sub = task.observe(this, snapshot -> { /* 该任务状态变化 */ });
 ```
 
-#### 8.3 Demo 里的实际实现
+`TaskState` 回答"现在在做什么"，`TaskOutcome / result / error` 回答"上一次结果是什么"。SDK 没有单独的 `FAILED` 状态；失败后任务回到 `READY` 或 `UNKNOWN`，失败类型和原因放在终态字段里。
 
-公开仓库的 `qingzhu-demo-main` 就是按上面的规则做的：
-
-| 位置 | 作用 |
+| 状态 | 含义 |
 |---|---|
-| `SdkManager.kt` | `QingzhuSdk.subscribe { tasks -> ... }`，缓存任务并转发给页面 |
-| `TaskFragment.kt` | `addTaskListener { adapter.submit(tasks) }` |
-| `TaskAdapter.kt` | `state` 转中文、`pendingIntentCount()` 显示待执行、发送中显示进度、完成后显示大小/耗时/速度或回显 |
-| `CommandSheet.kt` | 只用 `executeIntent(command)` 的 `TaskIntentResult` 弹「已排队 / 队列满 / 已连接」等即时提示 |
+| `UNKNOWN` | 只有 MAC，还没找到设备 |
+| `READY` | 已找到设备，空闲、未连接 |
+| `SEARCHING` | 占位任务正在扫描寻人 |
+| `QUEUED` | 等连接窗口、传输窗口，或处在重试等待 |
+| `CONNECTING` | 正在建立 GATT 连接 |
+| `CONNECTED` | 已连接，空闲或保持连接 |
+| `SENDING` | 正在发数据，看 `progress / sentBytes / totalBytes` |
 
-Demo 当前**没有使用** `executeIntent(command, callback)` 的 `TaskIntentStatus`：因为它只是展示任务列表，不需要把每次点击绑定到业务数据库或命令链。业务 App 若需要「每条命令独立回执」，再用第 9 节的命令级回调。
+#### 8.2 命令结果
 
-#### 8.4 单个配置：什么时候可以退出页面
+每条命令的最终结果通过 `TaskResult` 回调，恰好一次，包括被拒绝的情形：
 
-单个设备配置，推荐用 `executeIntent(command, callback)` 绑定这次业务动作：
-
-```java
-QTask task = QingzhuSdk.submit(mac, null);
-
-TaskIntentResult accepted = task.executeIntent(configCommand,
-        (intentId, status, result, error) -> {
-            if (status == TaskIntentStatus.SUCCEEDED
-                    && task.getOutcome() == TaskOutcome.SUCCEEDED
-                    && task.getError() == null) {
-                // 配置成功：可以退出配置页
-                finish();
-            } else if (status == TaskIntentStatus.FAILED) {
-                // 配置失败：展示 error，不要退出
-                showError(error);
-            } else {
-                // 取消：按业务决定是否重试
-                showCancelled();
-            }
-        });
-
-if (accepted == TaskIntentResult.BUSY
-        || accepted == TaskIntentResult.CLOSED) {
-    // 这条命令没有被接受，不会收到上面的 callback
-    showRejected(accepted);
-}
-```
-
-判断规则：
-
-| 组合 | 结果 | 页面动作 |
+| `isSuccess()` | `stage()` | 含义 |
 |---|---|---|
-| `TaskIntentResult.BUSY/CLOSED` | 没被接受，不会回调 | 提示，不退出 |
-| `TaskIntentStatus.SUCCEEDED` + `TaskOutcome.SUCCEEDED` + `error == null` | 配置成功 | 退出 |
-| `TaskIntentStatus.FAILED` + `CONNECT_FAILED` | 连接阶段失败 | 展示错误，不退出 |
-| `TaskIntentStatus.FAILED` + `OPERATION_FAILED` | 发送/业务失败 | 展示错误，不退出 |
-| `TaskIntentStatus.CANCELLED` | 用户取消或前序失败 | 展示取消，不退出 |
+| `true` | - | 成功，`payload()` 是设备回显，可能为 null |
+| `false` | `SEARCH` / `CONNECT` | 寻人或连接阶段失败，重试耗尽 |
+| `false` | `SEND` | 已连接后发送或业务失败，重试耗尽 |
+| `false` | `CANCEL` | 被 `cancel()` / `disconnect()` 取消，或前序命令失败导致取消 |
+| `false` | `DELETE` | 任务被删除 |
+| `false` | `BUSY` | 待办队列已满，命令没有被接受 |
+| `false` | `CLOSED` | 任务已删除，不能再接收命令 |
 
-注意：
+#### 8.3 成功、失败、取消怎么判断
 
-- `result` 是设备回显，可能为 null，不能只靠它判成功；
-- `state == CONNECTED` 且 `outcome == SUCCEEDED` 也可能是成功，不能一直等 `READY`；
-- `BUSY/CLOSED` 不会触发完成回调，要按 `TaskIntentResult` 当场处理。
+如果你看的是任务快照而不是单条命令回调：
 
-#### 8.5 批量配置：什么时候可以退出页面
+| UI 语义 | 判断条件 |
+|---|---|
+| 正在执行 | `state` 为 `SEARCHING / QUEUED / CONNECTING / SENDING` |
+| 有排队命令 | `pendingCount() > 0` |
+| 成功 | `outcome == SUCCEEDED` 且 `error == null` |
+| 连接阶段失败 | `outcome == CONNECT_FAILED` |
+| 发送或业务失败 | `outcome == OPERATION_FAILED` |
+| 取消或删除 | `outcome == CANCELLED` |
 
-批量配置要用显式 `Batch`。它和「自动学习批次」不是一回事：自动学习用 3 秒静默窗口收集普通 `submit`，`Batch` 是业务层明确划定的一轮配置边界。
+> 关键：`result != null` 不等于成功。成功失败的权威字段是 `TaskOutcome`，`state` 只说明当前阶段。
+
+#### 8.4 单个设备配置
 
 ```java
-QSdk.Batch batch = QingzhuSdk.beginBatch(result -> {
-    // 回调在主线程；所有任务终态、待办清空后只调用一次
-    if (result.isAllSucceeded()) {
-        // 全部配置成功，可以退出页面
-        finish();
+QTask task = QingzhuSdk.createTask(mac);
+task.setConnectParams(params);
+
+task.send(configCommand, result -> {
+    if (result.isSuccess()) {
+        finish();                       // 配置成功，可以退出页面
+    } else if (result.stage() == TaskStage.CANCEL) {
+        showCancelled();                // 取消：按业务决定是否重试
     } else {
-        showBatchSummary(
-                result.getTotal(),
-                result.getSucceeded(),
-                result.getConnectFailed(),
-                result.getOperationFailed(),
-                result.getCancelled()
-        );
+        showError(result.error());      // 失败：不要退出
     }
 });
+```
 
-int rejected = 0;
+#### 8.5 批量配置
+
+批量就是对每台设备循环，每台一个任务，业务自己统计结果：
+
+```java
+AtomicInteger remaining = new AtomicInteger(macs.size());
+AtomicInteger failed = new AtomicInteger();
+
 for (String mac : macs) {
-    if (batch.submit(mac, configCommand) == null) {
-        rejected++; // BUSY / CLOSED / 被别的批次认领：没有计入本轮
-    }
-}
-batch.finish(); // 提交完成，SDK 等待所有任务终态
-```
-
-`BatchResult` 的含义：
-
-| 字段 | 含义 |
-|---|---|
-| `getTotal()` | 本轮被接受的任务数 |
-| `getSucceeded()` | `TaskOutcome.SUCCEEDED` 数量 |
-| `getConnectFailed()` | 连接阶段失败数量 |
-| `getOperationFailed()` | 已连接后的发送/业务失败数量 |
-| `getCancelled()` | 取消、删除或未终态数量 |
-| `isAllSucceeded()` | `total > 0 且 succeeded == total` |
-
-批量配置结束条件：
-
-```text
-所有被接受的任务 outcome != NONE
-且 pendingIntentCount() == 0
-且不再处于 SEARCHING / QUEUED / CONNECTING / SENDING
-→ BatchListener.onFinished(result)
-```
-
-额外规则：
-
-- `batch.submit()` 返回 null 的命令不会执行，也不会计入 `BatchResult`；
-- `batch.cancel()` 也会触发 `onFinished()`，但 `cancelled` 会大于 0；
-- 10 分钟兜底超时会强制结算，未终态任务按取消处理；
-- 回调只在主线程触发一次，可以直接 `finish()` 或刷新页面。
-
-### 9. 意图排队与完成回调
-
-提交意图并立即判断是否被接受：
-
-```java
-TaskIntentResult result = task.executeIntent(command);
-
-switch (result) {
-    case STARTED:           // 已开始执行
-    case QUEUED:            // 进入待办队列
-    case ALREADY_SATISFIED: // 例如已连接时再次连接
-    case IN_PROGRESS:       // 已有操作进行中
-    case BUSY:              // 待办队列已满
-    case CLOSED:            // 任务已删除
+    QTask task = QingzhuSdk.createTask(mac);
+    task.send(configCommand, result -> {
+        if (!result.isSuccess()) {
+            failed.incrementAndGet();
+        }
+        if (remaining.decrementAndGet() == 0) {
+            // 全部有了结果，回调在主线程
+            showSummary(macs.size(), failed.get());
+        }
+    });
 }
 ```
 
-需要每条命令的最终结果：
+注意：`createTask` 会替换该设备已有的任务。如果某台设备的任务正在其它页面使用，改用 `getTask(mac)` 复用，避免静默替换。
 
-```java
-task.executeIntent(nextCommand, (intentId, status, result, error) -> {
-    switch (status) {
-        case SUCCEEDED:
-            // result 是设备回显，可能为 null
-            break;
-        case FAILED:
-            // error 是失败原因
-            break;
-        case CANCELLED:
-            // 任务取消、删除，或前序命令失败
-            break;
-    }
-});
-```
+### 9. 命令排队
 
-重复调用行为：
+同一台设备同一时刻只发一条命令，后续命令进入该任务的待办队列，不会覆盖当前命令。
 
-| 当前状态 | 新意图 | 行为 |
+| 当前状态 | 新命令 | 行为 |
 |---|---|---|
-| 已连接 | 再连接 | `ALREADY_SATISFIED`，不重复建连 |
-| 正在发送 | 再连接 | `ALREADY_SATISFIED`，发送完成后保持连接 |
-| 正在连接 | 再连接 | `IN_PROGRESS`，合并连接意图 |
-| 正在发送 | 再发送 | 进入待办队列，返回 `QUEUED` |
-| 待办已满 | 再发送 | 返回 `BUSY` |
-| 任意状态 | 删除任务 | 清空待办、终止发送、断开连接 |
+| 已连接 | `connect` | 立即回调成功，不重复建连 |
+| 正在发送 | `connect` | 立即回调成功，发送完成后保持连接 |
+| 正在连接 | `connect` | 合并，连接结果出来时一并回调 |
+| 正在发送 | `send` | 进入待办队列 |
+| 待办已满 | `send` | 回调 `TaskStage.BUSY` |
+| 任务已删除 | 任意 | 回调 `TaskStage.CLOSED` |
 
-每台设备默认排队 8 条发送意图：
+每台设备默认最多排队 8 条：
 
 ```java
 QingzhuSdk.setMaxPendingIntents(8);
 ```
 
-回调在主线程执行。`BUSY` 和 `CLOSED` 不会注册回调。
-
-![Qingzhu BLE 意图仲裁](docs/images/intent-gate.png)
+![Qingzhu BLE 命令仲裁](docs/images/intent-gate.png)
 
 ### 10. 取消与删除
 
 ```java
-task.cancel();  // 停止当前动作，清空待办，任务保留
-task.delete();  // 彻底删除，断开连接，之后提交返回 CLOSED
+task.cancel();      // 取消当前操作，回到操作开始前的链路状态，任务保留
+task.disconnect();  // 断开连接，任务保留
+task.delete();      // 取消当前操作、断开连接，并从任务池移除
 ```
 
-取消和删除会给当前、待办和连接等待中的意图发送 `CANCELLED` 回调。
+三者的区别：
+
+| | `cancel()` | `disconnect()` | `delete()` |
+|---|---|---|---|
+| 停止当前操作 | 是 | 是 | 是 |
+| 之后的链路 | 回到操作开始前的状态 | 断开 | 断开 |
+| 任务留在池里 | 是 | 是 | 否 |
+| 命令回调的 `stage` | `CANCEL` | `CANCEL` | `DELETE` |
+| 之后再调用 | 任务可继续使用 | 任务可继续使用 | 所有调用返回失败 |
+
+`cancel()` 的回退规则：操作开始前已连接且正在发送，只中止发送、保持连接；其余情形（寻人、排队、建连、重试等待，或操作开始前未连接）都断开回到未连接。
+
+删除任务也可以不持有任务句柄：`QingzhuSdk.deleteTask(mac)`。
 
 ### 11. 多设备调度
 
 ```java
-QingzhuSdk.setMaxConnections(0);        // 0 = 自动建议，1-N = 手动
+QingzhuSdk.setMaxConnections(0);        // 0 = 按设备建议值，1-N = 手动固定
 QingzhuSdk.setMaxTransfers(1);          // 1 = 串行传输
 QingzhuSdk.setMaxRetries(3);            // 连接/发送/寻人失败重试次数
-QingzhuSdk.setMaxPendingIntents(8);     // 每设备待办发送数
+QingzhuSdk.setMaxPendingIntents(8);     // 每设备待执行命令数
 QingzhuSdk.setConnectCallbackTimeoutMs(20_000); // GATT 连接回调兜底
 
 int currentCapacity = QingzhuSdk.getConcurrency();
 ```
 
 普通机型建议从 `setMaxConnections(0)` + `setMaxTransfers(1)` 开始；目标机型验证稳定后再提高传输并发。
+
+> `setMaxConnections(0)` 只在初始化时取一次建议值，不会根据运行结果自动调整。需要更高或更低的并发，请手动指定。
 
 ![Qingzhu BLE 多设备调度](docs/images/scheduling.png)
 
@@ -691,6 +601,38 @@ QingzhuSdk.registerProtocol(new MyProtocolPlugin());
 
 - [GenericProtocolPlugin](qingzhu-protocol-generic/src/main/java/com/qingzhu/protocol/generic/GenericProtocolPlugin.java)
 - [EddystoneProtocolPlugin](qingzhu-protocol-eddystone/src/main/java/com/qingzhu/protocol/eddystone/EddystoneProtocolPlugin.java)
+
+## 附录 A：命令模型与 Builder（真实 API）
+
+构造方式：
+
+```java
+QCommand.builder().connect().build();
+QCommand.builder().send(json).build();
+QCommand.builder().send(json, bytes).build();
+QCommand.builder().send(json, attachments).build();
+QCommand.builder().send(json).keepConnected().build();
+QCommand.builder().send(json).disconnectAfter().build();
+QCommand.builder().send(json).noAck().build();
+QCommand.builder().connect().reconnect(policy).build();
+```
+
+默认值与注意点：
+
+- 发完是否断开取决于任务：经 `connect` 连接过的任务发完保持连接，否则发完断开；`keepConnected()` 和 `disconnectAfter()` 显式指定，且互斥，同时调用会在 `build()` 抛 `IllegalStateException`；
+- `reconnectPolicy` 默认 `OFF`，不是默认无限重连；
+- 连接参数不属于命令，通过 `task.setConnectParams(params)` 设置；
+- `connect()` 负责“连上并保持”，没有后续 `send`；
+- `noAck()` 目前只是命令上的标记，**还没有传给底层，暂不起作用**；
+- 核心只传递命令，不关心 `action` 的含义，具体含义由协议插件解析，新增指令不需要修改任务池 API。
+
+### 已知边界
+
+- **没有设备主动上报通路**：`QTask` 没有 `listen`，设备主动推送的数据暂时无法通过任务接收。
+- **没有自动并发学习**：见第 11 节。
+- 服务发现返回 0 个服务时，当前仍被当成成功继续往下走；设备被短时间反复连断后可能进入异常，表现为连接后被设备主动断开（状态码 19）。
+- 快速反复进出同一设备时，内核保证不会互相堵死，但不限制连接频率。
+- 只有 Android 实现，`BleAdapter` 是预留的平台抽象。
 
 ## 构建
 
@@ -746,7 +688,9 @@ reference/fullstack/
 ./gradlew :qingzhu-core:testDebugUnitTest
 ```
 
-覆盖重复连接、发送中连接、连续发送排队、队列满、取消、失败、删除和命令级回调。
+覆盖 `createTask` 替换已有任务、`getTask` 只查询、`deleteTask`、连接幂等、发送成功回调、发完断开、`cancel` / `disconnect` / `delete` 的状态回退、命令排队、`observeAll` 取消订阅，以及被替换旧任务的迟到连接回调不会断开新任务共享的链路。
+
+> `ConnectionPool` 的真实时序（建连闸门、释放与复位）没有自动化测试，只能靠真机验证。
 
 ## Screenshot
 
@@ -784,7 +728,7 @@ reference/fullstack/
 
 **为什么任务没有 FAILED 状态？**
 
-失败后会回到 `READY` / `UNKNOWN`，具体错误写入 `getError()`；命令级最终状态通过 `TaskIntentStatus` 回调。
+失败后会回到 `READY` / `UNKNOWN`，具体错误写入 `getError()`；每条命令的最终结果通过 `TaskResult` 回调，失败阶段见 `TaskStage`。
 
 更多问题请查看 [文档站](https://qingzhu-ai-public.github.io/qingzhu-blue/)。
 
@@ -793,6 +737,7 @@ reference/fullstack/
 | 版本 | 日期 | 说明 |
 |---|---|---|
 | `v1.0.0-preview` | 2026-11-17 | 首个公开源码预览；任务内核、意图队列、Generic / Eddystone 协议、试玩 APK |
+| `v1.0.0-preview.2` | 2026-11-19 | 任务接口改造：`createTask / getTask / deleteTask`，命令结果统一为 `TaskResult` 回调，新增 `observeAll`、`Subscription`、`disconnect`、`setConnectParams`；`cancel` 回到操作开始前的链路状态；`disconnectAfter` 生效；修复连接池建连闸门被已取消连接占满、释放中旧链路与新链路交叉的问题。**不兼容变更**：删除 `submit`、`subscribe`、`beginBatch` 与 `TaskIntent*` |
 
 ## License
 
