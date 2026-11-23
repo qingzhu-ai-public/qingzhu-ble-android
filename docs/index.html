@@ -192,7 +192,7 @@ pre .cm{color:#6B7F9C}
   <nav id="viewnav">
     <a href="?view=home" data-view="home" class="on"><i>01</i>首页</a>
     <a href="?view=arch" data-view="arch"><i>02</i>架构全景</a>
-    <a href="?view=api" data-view="api"><i>03</i>API 速查</a>
+    <a href="?view=guide" data-view="guide"><i>03</i>接入指南</a>
   </nav>
   <div class="sep">本页目录</div>
   <nav id="toc"></nav>
@@ -228,10 +228,10 @@ pre .cm{color:#6B7F9C}
       <h3>架构全景</h3>
       <p>三级结构、两个队列、状态机、各场景内部流程。</p>
     </a>
-    <a class="en" href="?view=api" data-view="api">
-      <span class="k">Reference</span>
-      <h3>API 速查</h3>
-      <p>门面、任务、命令、结果类型的全部公开方法。</p>
+    <a class="en" href="?view=guide" data-view="guide">
+      <span class="k">Guide</span>
+      <h3>接入指南</h3>
+      <p>从引依赖到收结果，照着步骤走一遍。</p>
     </a>
     <a class="en" href="#start">
       <span class="k">Quickstart</span>
@@ -289,7 +289,7 @@ task.send(
 );</code></pre>
     <div class="note"><b>判断成功只看 <code>isSuccess()</code>。</b>payload 是设备回显，成功也可能为空，不要用 payload 判成败。</div>
   </div>
-  <p class="cap">完整接入步骤见 README 的「接入文档」一节</p>
+  <p class="cap"><a href="?view=guide" data-view="guide">从引依赖到收结果，看「接入指南」</a></p>
 </section>
 
 <section id="home-numbers">
@@ -574,145 +574,308 @@ task.send(
 
 </div>
 
-<!-- ============ API 速查 ============ -->
-<div class="view" id="view-api" data-view="api" hidden>
+<!-- ============ 接入指南 ============ -->
+<div class="view" id="view-guide" data-view="guide" hidden>
 
 <header class="hero">
-  <h1>API 速查</h1>
-  <p>全部公开方法，签名对照源码。示例用 Java，Kotlin 直接调用即可。</p>
+  <h1>接入指南<br><span>照着做就能跑</span></h1>
+  <p>从引依赖到收结果，按步骤走一遍。代码全部来自当前源码与试玩 App，可直接复制。</p>
+  <div class="tags">
+    <span class="tag">12 步</span>
+    <span class="tag">Java 示例</span>
+    <span class="tag">单设备 / 批量 / 网关</span>
+  </div>
 </header>
 
-<section id="sdk">
-  <div class="hd"><span class="no">01</span><h2>QingzhuSdk 门面</h2></div>
-  <p class="lead">静态方法，进程内单例。重复初始化幂等。</p>
-  <div class="tw">
-    <table>
-      <thead><tr><th>方法</th><th>作用</th></tr></thead>
-      <tbody>
-        <tr><td><code>init(Context)</code></td><td>初始化内核与适配器，注册 Eddystone 与 Generic 两个开源协议</td></tr>
-        <tr><td><code>registerProtocol(ProtocolPlugin)</code></td><td>注册协议插件，重复注册同一 id 幂等；注册后立即触发 <code>install()</code></td></tr>
-        <tr><td><code>getProtocols()</code></td><td>当前已装配的协议 id 列表</td></tr>
-        <tr><td><code>startScan(ScanListener)</code></td><td>开始扫描，默认参数</td></tr>
-        <tr><td><code>startScan(ScanOptions, ScanListener)</code></td><td>带过滤条件的扫描</td></tr>
-        <tr><td><code>stopScan()</code> / <code>restartScan()</code></td><td>停止 / 重启扫描</td></tr>
-        <tr><td><code>setScanStateListener(ScanStateListener)</code></td><td>监听扫描开关状态</td></tr>
-        <tr><td><code>createTask(String mac)</code></td><td>新建任务。<b>会先删除该设备已有任务</b></td></tr>
-        <tr><td><code>createTask(QDevice)</code></td><td>用扫描到的设备建任务，同样先删后建</td></tr>
-        <tr><td><code>getTask(String mac)</code></td><td>只查询，没有返回 <code>null</code></td></tr>
-        <tr><td><code>deleteTask(String mac)</code></td><td>取消、断开、从任务池移除</td></tr>
-        <tr><td><code>observeAll(Object owner, TaskListListener)</code></td><td>观察全部任务，注册后立即推一次全量快照</td></tr>
-        <tr><td><code>snapshots()</code></td><td>当前所有任务的不可变快照列表</td></tr>
-        <tr><td><code>setMaxConnections(int)</code></td><td>并发连接数。0 = 用体检建议值，1-N = 手动固定</td></tr>
-        <tr><td><code>setMaxTransfers(int)</code></td><td>传输窗口。1 = 串行，N = 最多 N 台同时发</td></tr>
-        <tr><td><code>setMaxRetries(int)</code></td><td>失败重试次数，默认 3</td></tr>
-        <tr><td><code>setMaxPendingIntents(int)</code></td><td>每设备指令队列上限，默认 10000；0 = 忙碌时直接失败</td></tr>
-        <tr><td><code>setConnectCallbackTimeoutMs(long)</code></td><td>系统连接回调兜底，默认 20 秒</td></tr>
-        <tr><td><code>getConcurrency()</code></td><td>当前生效的并发容量</td></tr>
-        <tr><td><code>settings()</code></td><td>全局设置中心，含协议声明的可配置项</td></tr>
-      </tbody>
-    </table>
+<section id="g-flow">
+  <div class="hd"><span class="no">00</span><h2>整体流程</h2></div>
+  <p class="lead">六步走完，第一条命令就发出去了。</p>
+  <div class="plate">
+    <div class="flow">
+      <div class="fs"><div class="dot">01</div><div class="bd"><b>添加依赖</b><small>引入 qingzhu-company-sdk</small></div></div>
+      <div class="fs"><div class="dot">02</div><div class="bd"><b>配置权限</b><small>清单声明 + 运行时申请</small></div></div>
+      <div class="fs"><div class="dot">03</div><div class="bd"><b>初始化</b><small>Application 里调一次 init</small></div></div>
+      <div class="fs"><div class="dot">04</div><div class="bd"><b>扫描</b><small>拿到设备或直接拿 MAC</small></div></div>
+      <div class="fs key"><div class="dot">05</div><div class="bd"><b>创建任务</b><small>一台设备一个 QTask</small></div></div>
+      <div class="fs end"><div class="dot">06</div><div class="bd"><b>发命令 / 收结果</b><small>SDK 负责寻人、连接、重发、断开</small></div></div>
+    </div>
   </div>
 </section>
 
-<section id="task">
-  <div class="hd"><span class="no">02</span><h2>QTask 任务</h2></div>
-  <p class="lead">一台设备一个任务。所有读写方法都可随时调用。</p>
-  <div class="tw">
-    <table>
-      <thead><tr><th>方法</th><th>说明</th></tr></thead>
-      <tbody>
-        <tr><td><code>send(QCommand, TaskCallback)</code></td><td>发命令。被接收就恰好回调一次；队列满回调 <code>BUSY</code></td></tr>
-        <tr><td><code>connect(TaskCallback)</code></td><td>连接并保持。已连接时立即回调成功</td></tr>
-        <tr><td><code>disconnect()</code></td><td>真正断开，任务保留</td></tr>
-        <tr><td><code>setConnectParams(Map)</code></td><td>设置连接参数，对该任务之后的所有连接生效</td></tr>
-        <tr><td><code>observe(Object, TaskObserver)</code></td><td>观察本任务，回调不可变快照</td></tr>
-        <tr><td><code>cancel()</code></td><td>中止当前操作，回到操作开始前的链路状态，任务保留</td></tr>
-        <tr><td><code>delete()</code></td><td>取消 + 断开 + 从任务池移除</td></tr>
-        <tr><td><code>id()</code></td><td>任务 id。清理时用它判断是不是自己那个任务</td></tr>
-        <tr><td><code>deviceMac()</code> / <code>currentMac()</code></td><td>任务绑定的 MAC / 当前实际连接的地址</td></tr>
-        <tr><td><code>getDevice()</code></td><td>扫描解析出的设备，未找到时为 <code>null</code></td></tr>
-        <tr><td><code>getState()</code></td><td>当前状态，见枚举</td></tr>
-        <tr><td><code>getOutcome()</code></td><td>最近一次命令的终态分类</td></tr>
-        <tr><td><code>getResult()</code></td><td>设备回执，可能为 <code>null</code></td></tr>
-        <tr><td><code>getError()</code></td><td>最近一次失败原因</td></tr>
-        <tr><td><code>getProgress()</code> / <code>getSentBytes()</code> / <code>getTotalBytes()</code></td><td>发送进度与字节数</td></tr>
-        <tr><td><code>pendingIntentCount()</code></td><td>待办队列里还有几条</td></tr>
-        <tr><td><code>isDeleted()</code></td><td>是否已被删除</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="note warn"><b>反复进出页面时用 <code>createTask</code>。</b>旧页面的销毁可能晚于新页面启动，用同一个任务会互相干扰。清理时带 taskId 只删自己那个。</div>
-</section>
+<section id="g-dep">
+  <div class="hd"><span class="no">01</span><h2>添加依赖</h2></div>
+  <p class="lead">当前公开仓库提供源码模块接入。</p>
+  <div class="plate">
+    <pre><code><span class="cm">// settings.gradle</span>
+include ':qingzhu-core'
+include ':qingzhu-company-sdk'
+include ':qingzhu-protocol-generic'
+include ':qingzhu-protocol-eddystone'
 
-<section id="cmd">
-  <div class="hd"><span class="no">03</span><h2>QCommand 命令</h2></div>
-  <p class="lead">用 Builder 构造。<code>keepConnected()</code> 与 <code>disconnectAfter()</code> 互斥。</p>
-  <div class="tw">
-    <table>
-      <thead><tr><th>方法</th><th>说明</th></tr></thead>
-      <tbody>
-        <tr><td><code>connect()</code></td><td>只连接，不发送</td></tr>
-        <tr><td><code>send(String json)</code></td><td>发文本 JSON</td></tr>
-        <tr><td><code>send(String json, byte[] data)</code></td><td>JSON + 单块字节</td></tr>
-        <tr><td><code>send(String json, Map attachments)</code></td><td>JSON + 多附件，大块数据走这里</td></tr>
-        <tr><td><code>keepConnected()</code></td><td>发完保持连接</td></tr>
-        <tr><td><code>disconnectAfter()</code></td><td>发完明确断开，优先于任务的保持期望</td></tr>
-        <tr><td><code>noAck()</code></td><td>标记无需应答。目前只是标记，未传给底层</td></tr>
-        <tr><td><code>reconnect(ReconnectPolicy)</code></td><td>意外断开后的重连策略，默认关闭</td></tr>
-        <tr><td><code>build()</code></td><td>两个互斥项同时出现时抛 <code>IllegalStateException</code></td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="note"><b>发完断不断的判断：</b>命令没有声明 <code>disconnectAfter</code>，且任务上有保持期望或命令声明了 <code>keepConnected</code> 时，保持连接。</div>
-</section>
-
-<section id="result">
-  <div class="hd"><span class="no">04</span><h2>TaskResult 命令结果</h2></div>
-  <p class="lead">每条被接收的命令回调一次。</p>
-  <div class="tw">
-    <table>
-      <thead><tr><th>方法</th><th>说明</th></tr></thead>
-      <tbody>
-        <tr><td><code>isSuccess()</code></td><td><b>判断成功的唯一依据</b></td></tr>
-        <tr><td><code>payload()</code></td><td>设备回执，成功也可能为 <code>null</code></td></tr>
-        <tr><td><code>error()</code></td><td>失败原因</td></tr>
-        <tr><td><code>stage()</code></td><td>失败发生在哪一步，见 TaskStage</td></tr>
-      </tbody>
-    </table>
+<span class="cm">// app/build.gradle</span>
+dependencies {
+    implementation project(':qingzhu-company-sdk')
+}</code></pre>
+    <div class="note"><b>业务只依赖门面。</b><code>qingzhu-company-sdk</code> 是唯一源码门面；宿主 AAR 由内部工程打包，不在公开仓库发布。</div>
   </div>
 </section>
 
-<section id="enum">
-  <div class="hd"><span class="no">05</span><h2>枚举</h2></div>
-  <div class="tw">
-    <table>
-      <thead><tr><th style="width:170px">类型</th><th>取值</th></tr></thead>
-      <tbody>
-        <tr><td><code>TaskState</code></td><td><code>UNKNOWN</code> <code>READY</code> <code>SEARCHING</code> <code>QUEUED</code> <code>CONNECTING</code> <code>CONNECTED</code> <code>SENDING</code></td></tr>
-        <tr><td><code>TaskOutcome</code></td><td><code>NONE</code> <code>SUCCEEDED</code> <code>CONNECT_FAILED</code> <code>OPERATION_FAILED</code> <code>CANCELLED</code></td></tr>
-        <tr><td><code>TaskStage</code></td><td><code>SEARCH</code> <code>CONNECT</code> <code>SEND</code> <code>CANCEL</code> <code>DELETE</code> <code>BUSY</code> <code>CLOSED</code></td></tr>
-      </tbody>
-    </table>
+<section id="g-perm">
+  <div class="hd"><span class="no">02</span><h2>配置权限</h2></div>
+  <p class="lead">Android 12 起要动态申请蓝牙权限；11 及以下还要开定位。</p>
+  <div class="plate">
+    <pre><code><span class="cm">&lt;!-- AndroidManifest.xml --&gt;</span>
+&lt;uses-permission android:name="android.permission.BLUETOOTH_SCAN" /&gt;
+&lt;uses-permission android:name="android.permission.BLUETOOTH_CONNECT" /&gt;
+&lt;uses-permission android:name="android.permission.BLUETOOTH"
+    android:maxSdkVersion="30" /&gt;
+&lt;uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+    android:maxSdkVersion="30" /&gt;
+&lt;uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /&gt;
+&lt;uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" /&gt;</code></pre>
+    <div class="note warn"><b>先申请权限再扫描。</b>Android 12+ 申请 <code>BLUETOOTH_SCAN</code> 和 <code>BLUETOOTH_CONNECT</code>；Android 11- 还需要定位权限，并且系统定位开关要打开。</div>
   </div>
-  <div class="note">没有 <code>FAILED</code> 状态。失败后任务回到 <code>READY</code> 或 <code>UNKNOWN</code>，失败原因看 <code>error</code> 与 <code>stage</code>。</div>
 </section>
 
-<section id="scan">
-  <div class="hd"><span class="no">06</span><h2>扫描与快照</h2></div>
-  <p class="lead">ScanOptions 只过滤 UI 回调，任务池仍接收完整广播。</p>
-  <div class="tw">
-    <table>
-      <thead><tr><th style="width:230px">类型</th><th>成员</th></tr></thead>
-      <tbody>
-        <tr><td><code>ScanOptions.Builder</code></td><td><code>setTimeoutMs</code> <code>setMinRssi</code> <code>setNamePrefix</code> <code>addProtocol</code> <code>addStableId</code></td></tr>
-        <tr><td><code>ScanListener</code></td><td><code>onDevices(List&lt;QDevice&gt;)</code> <code>onScanFailed(int, String)</code> <code>onScanStopped(List)</code></td></tr>
-        <tr><td><code>TaskSnapshot</code></td><td><code>id</code> <code>deviceMac</code> <code>currentMac</code> <code>state</code> <code>outcome</code> <code>progress</code> <code>sentBytes</code> <code>totalBytes</code> <code>result</code> <code>error</code> <code>pendingCount</code></td></tr>
-        <tr><td><code>Subscription</code></td><td><code>cancel()</code> <code>isActive()</code></td></tr>
-        <tr><td><code>QDevice</code></td><td><code>getMac</code> <code>getName</code> <code>getRssi</code> <code>getStableId</code> <code>getProtocolType</code> <code>getMetadata</code></td></tr>
-      </tbody>
-    </table>
+<section id="g-init">
+  <div class="hd"><span class="no">03</span><h2>初始化</h2></div>
+  <p class="lead">在 Application 里调一次，重复调用幂等。</p>
+  <div class="plate">
+    <pre><code>public class App extends Application {
+    @Override public void onCreate() {
+        super.onCreate();
+        QingzhuSdk.init(this);
+    }
+}</code></pre>
+    <div class="note"><code>init()</code> 会初始化内核，并注册 Generic、Eddystone 两个开源协议。之后可以随时用 <code>registerProtocol()</code> 追加自己的协议。</div>
   </div>
-  <div class="note warn"><b>去重用 stableId，不要用 MAC。</b>地址会轮换的设备，MAC 会变，stableId 不会。</div>
+</section>
+
+<section id="g-scan">
+  <div class="hd"><span class="no">04</span><h2>扫描设备</h2></div>
+  <p class="lead">拿到设备对象，或者只记下 MAC 也行。</p>
+  <div class="plate">
+    <pre><code>QingzhuSdk.startScan(new QSdk.ScanListener() {
+    @Override public void onDevices(List&lt;QDevice&gt; devices) {
+        for (QDevice device : devices) {
+            String mac = device.getMac();
+            String stableId = device.getStableId();
+            String name = device.getName();
+        }
+    }
+    @Override public void onScanFailed(int code, String msg) { }
+    @Override public void onScanStopped(List&lt;QDevice&gt; devices) { }
+});</code></pre>
+    <pre><code><span class="cm">// 带条件扫描；过滤只影响 UI 回调，不影响任务寻人</span>
+QingzhuSdk.startScan(
+    ScanOptions.builder()
+        .setTimeoutMs(30_000)
+        .setNamePrefix("ESL")
+        .addProtocol("generic")
+        .build(),
+    listener);</code></pre>
+    <div class="note warn"><b>列表去重用 <code>getStableId()</code>，不要只用 MAC。</b>地址轮换的设备 MAC 会变，稳定身份不变。</div>
+  </div>
+</section>
+
+<section id="g-task">
+  <div class="hd"><span class="no">05</span><h2>创建任务</h2></div>
+  <p class="lead">一台设备一个任务，任务里排命令。</p>
+  <div class="plate">
+    <pre><code>QTask task = QingzhuSdk.createTask(device);  <span class="cm">// 已知扫描设备</span>
+QTask task = QingzhuSdk.createTask(mac);     <span class="cm">// 只知道 MAC 也能建</span>
+QTask old  = QingzhuSdk.getTask(mac);        <span class="cm">// 只查询，没有返回 null</span>
+QingzhuSdk.deleteTask(mac);                  <span class="cm">// 删除任务</span></code></pre>
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:140px"></th><th>createTask</th><th>getTask</th></tr></thead>
+        <tbody>
+          <tr><td>已有任务</td><td>先删旧的再新建</td><td>返回已有任务</td></tr>
+          <tr><td>没有任务</td><td>新建</td><td>返回 <code>null</code></td></tr>
+          <tr><td>旧连接与排队命令</td><td>被断开、被丢弃</td><td>不受影响</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre><code><span class="cm">// 多个页面共享同一台设备：先查再建</span>
+QTask task = QingzhuSdk.getTask(mac);
+if (task == null) task = QingzhuSdk.createTask(mac);</code></pre>
+    <div class="note danger"><b>循环里别反复 <code>createTask</code>。</b>每次调用都是删旧建新，for 循环 100 次，前 99 条命令连任务一起被删掉，最后只剩 1 条。</div>
+  </div>
+</section>
+
+<section id="g-send">
+  <div class="hd"><span class="no">06</span><h2>连接与发送</h2></div>
+  <p class="lead">命令用 Builder 构造，一条命令一个回调。</p>
+  <div class="plate">
+    <pre><code><span class="cm">// 只连接并保持</span>
+task.connect(result -&gt; { });
+
+<span class="cm">// JSON 指令</span>
+QCommand cmd = QCommand.builder()
+    .send("{\"action\":\"echo\"}")
+    .build();
+task.send(cmd, result -&gt; { });
+
+<span class="cm">// JSON + 单块字节 / 多附件</span>
+QCommand.builder().send(json, firmwareBytes).build();
+QCommand.builder().send(json, attachments).build();
+
+<span class="cm">// 连接参数属于任务，不属于命令</span>
+task.setConnectParams(params);</code></pre>
+    <div class="note"><b>发完断不断：</b>默认由任务是否带「保持连接」期望决定；<code>keepConnected()</code> 和 <code>disconnectAfter()</code> 显式指定且互斥，同时写在 <code>build()</code> 会抛异常。</div>
+  </div>
+</section>
+
+<section id="g-result">
+  <div class="hd"><span class="no">07</span><h2>拿结果与看状态</h2></div>
+  <p class="lead">单条命令看回调，界面刷新看快照。</p>
+  <div class="plate">
+    <pre><code>task.send(cmd, result -&gt; {
+    if (result.isSuccess()) {
+        String payload = result.payload();   <span class="cm">// 可能为 null</span>
+    } else {
+        TaskStage stage = result.stage();    <span class="cm">// 失败在哪一步</span>
+        String error = result.error();
+    }
+});</code></pre>
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:110px">stage</th><th>含义</th></tr></thead>
+        <tbody>
+          <tr><td><code>SEARCH/CONNECT</code></td><td>寻人或连接失败，重试已耗尽</td></tr>
+          <tr><td><code>SEND</code></td><td>已连接后发送或业务失败</td></tr>
+          <tr><td><code>CANCEL</code></td><td>被取消，或前序命令失败连带取消</td></tr>
+          <tr><td><code>DELETE</code> / <code>CLOSED</code></td><td>任务被删除 / 已删除</td></tr>
+          <tr><td><code>BUSY</code></td><td>队列满，命令没有被接受</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre><code><span class="cm">// 观察全部任务：注册后立即推一次，回调在主线程</span>
+Subscription sub = QingzhuSdk.observeAll(this, snapshots -&gt; {
+    for (TaskSnapshot s : snapshots) {
+        TaskState state = s.state();
+        int pending = s.pendingCount();
+        String error = s.error();
+    }
+});
+<span class="cm">// sub.cancel();  // 不用时取消订阅</span></code></pre>
+    <div class="note danger"><b>判断成功只看 <code>isSuccess()</code>。</b><code>payload</code> 是设备回显，成功也可能为空；快照里看 <code>outcome == SUCCEEDED</code>，<code>result != null</code> 不等于成功。</div>
+  </div>
+</section>
+
+<section id="g-single">
+  <div class="hd"><span class="no">08</span><h2>单台设备配置</h2></div>
+  <p class="lead">一个能直接抄的完整例子。</p>
+  <div class="plate">
+    <pre><code>QTask task = QingzhuSdk.getTask(mac);
+if (task == null) task = QingzhuSdk.createTask(mac);
+task.setConnectParams(params);
+
+task.send(configCommand, result -&gt; {
+    if (result.isSuccess()) {
+        finish();                          <span class="cm">// 成功，退出页面</span>
+    } else if (result.stage() == TaskStage.CANCEL) {
+        showCancelled();                   <span class="cm">// 取消，业务决定是否重试</span>
+    } else {
+        showError(result.error());         <span class="cm">// 失败，不要退出</span>
+    }
+});</code></pre>
+    <div class="note"><b>退出页面别急着 deleteTask。</b>下次进来还要用这个任务；只有在你要彻底放弃这台设备时才删。</div>
+  </div>
+</section>
+
+<section id="g-batch">
+  <div class="hd"><span class="no">09</span><h2>批量配置</h2></div>
+  <p class="lead">N 台设备就是 N 个任务，一台失败不影响其他。</p>
+  <div class="plate">
+    <pre><code><span class="cm">// 1. 先按 MAC 转大写去重，total 用去重后的数量</span>
+List&lt;String&gt; macs = dedupUpper(inputMacs);
+
+AtomicInteger remaining = new AtomicInteger(macs.size());
+AtomicInteger failed = new AtomicInteger();
+
+<span class="cm">// 2. 循环发命令</span>
+for (String mac : macs) {
+    QTask task = QingzhuSdk.getTask(mac);
+    if (task == null) task = QingzhuSdk.createTask(mac);
+
+    task.send(configCommand, result -&gt; {
+        if (!result.isSuccess()) failed.incrementAndGet();
+        if (remaining.decrementAndGet() == 0) {
+            showSummary(macs.size(), failed.get());
+        }
+    });
+}</code></pre>
+    <div class="note warn"><b>不去重会出两种问题：</b>同一台设备被配多次，或者任务被 <code>createTask</code> 反复替换；而且 <code>total</code> 和实际回调次数对不上。</div>
+    <div class="note"><b>并发规模：</b>连接池默认 7 条连接，其余进无界队列排队；100 台大约等于 100/7 乘以单台耗时。</div>
+  </div>
+</section>
+
+<section id="g-gateway">
+  <div class="hd"><span class="no">10</span><h2>网关持续下发</h2></div>
+  <p class="lead">MQTT 随时来指令，一个任务不断接。不用改底层。</p>
+  <div class="plate">
+    <div class="flow">
+      <div class="fs"><div class="dot">01</div><div class="bd"><b>MQTT 到达</b><small>子线程，不能直接调 send</small></div></div>
+      <div class="fs key"><div class="dot">02</div><div class="bd"><b>投递到主线程</b><small>保证 send 串行，避免两条命令同时发</small></div></div>
+      <div class="fs"><div class="dot">03</div><div class="bd"><b>getTask 复用</b><small>没有才 createTask</small></div></div>
+      <div class="fs end"><div class="dot">04</div><div class="bd"><b>send + 定时回收</b><small>回调回执云端，空闲任务 deleteTask</small></div></div>
+    </div>
+    <pre><code><span class="cm">// 在调度器（如主线程 Handler）里执行</span>
+QTask task = QingzhuSdk.getTask(cmd.mac);
+if (task == null) task = QingzhuSdk.createTask(cmd.mac);
+
+task.send(QCommand.builder().send(cmd.payload).keepConnected().build(), result -&gt; {
+    if (result.isSuccess()) cloud.ack(cmd.id, result.payload());
+    else if (result.stage() == TaskStage.BUSY) cloud.requeue(cmd.id);
+    else cloud.fail(cmd.id, result.stage(), result.error());
+});</code></pre>
+    <div class="note danger"><b>三件事要自己保证：</b><code>send</code> 内部没有锁，并发调用要串行化；任务不会自动回收，要定时 <code>deleteTask</code>；进程重启内存队列会丢，云端要保留未确认指令重投。</div>
+  </div>
+</section>
+
+<section id="g-life">
+  <div class="hd"><span class="no">11</span><h2>取消与删除</h2></div>
+  <p class="lead">cancel 是停，delete 是换。</p>
+  <div class="plate">
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:130px"></th><th>cancel</th><th>delete</th></tr></thead>
+        <tbody>
+          <tr><td>任务对象</td><td>保留，id 不变</td><td>移除，下次是新 id</td></tr>
+          <tr><td>设备信息</td><td>保留</td><td>随任务丢掉</td></tr>
+          <tr><td>观察者</td><td>仍然有效</td><td>一并清空</td></tr>
+          <tr><td>命令 stage</td><td><code>CANCEL</code></td><td><code>DELETE</code></td></tr>
+          <tr><td>下次再发</td><td>直接 send</td><td>先 createTask</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre><code>task.cancel();      <span class="cm">// 停：回到操作开始前的链路状态</span>
+task.disconnect();  <span class="cm">// 断开连接，任务保留</span>
+task.delete();      <span class="cm">// 换：取消 + 断开 + 从池里移除</span></code></pre>
+  </div>
+</section>
+
+<section id="g-plugin">
+  <div class="hd"><span class="no">12</span><h2>接入自己的协议</h2></div>
+  <p class="lead">实现 ProtocolPlugin，注册进去就行，内核不用改。</p>
+  <div class="plate">
+    <pre><code>QingzhuSdk.registerProtocol(new MyProtocolPlugin());</code></pre>
+    <p class="cap">协议插件可声明识别器、稳定身份、扫描过滤、连接步骤、GATT 就绪钩子、心跳、默认配置和消息路由。</p>
+    <div class="note"><b>JSON to JSON：</b>内核不解析业务 JSON，只按 <code>protocolType</code> 路由给协议的 <code>ActionHandler</code>。新增指令不用改任务池 API。</div>
+    <div class="note ok"><b>不想要某个设备了，删掉对应 AAR 即可。</b>门面按类名装配，找不到类就跳过，原来写好的业务代码不改、不报错。</div>
+    <div class="note warn"><b>一个细节：</b>整个协议 AAR 被删后，扫描阶段可能没有 recognizer 认领设备，失败会发生在寻人超时，而不一定是 <code>PROTOCOL_NOT_FOUND</code>。业务侧按「命令失败」统一处理即可。</div>
+  </div>
+</section>
+
+<section id="g-limits">
+  <div class="hd"><span class="no">13</span><h2>先记住这些边界</h2></div>
+  <div class="plate">
+    <div class="note danger"><b><code>send</code> 不是线程安全的。</b>子线程并发调用要自己串行化，否则可能两条命令同时发。</div>
+    <div class="note warn"><b>任务不会自动回收。</b>长期运行的服务要定时 <code>deleteTask</code>，否则任务池只增不减。</div>
+    <div class="note warn"><b>没有设备主动上报通路。</b><code>QTask</code> 没有 <code>listen</code>，设备主动推送暂时收不到。</div>
+    <div class="note"><b>只有 Android 实现。</b><code>BleAdapter</code> 是平台抽象，但目前只有一份实现。</div>
+  </div>
 </section>
 
 </div>
@@ -728,11 +891,11 @@ task.send(
   var foot = document.getElementById('foot');
   var views = Array.prototype.slice.call(document.querySelectorAll('.view'));
   var viewLinks = Array.prototype.slice.call(document.querySelectorAll('#viewnav a'));
-  var titles = { home:'文档', arch:'架构全景', api:'API 速查' };
+  var titles = { home:'文档', arch:'架构全景', guide:'接入指南' };
   var foots = {
     home:'青竹 BLE SDK · 文档 · 内容对照 qingzhu-core 源码',
     arch:'青竹 BLE SDK · 架构全景 · 对照 qingzhu-core 源码',
-    api:'青竹 BLE SDK · API 速查 · 签名对照 qingzhu-core 源码'
+    guide:'青竹 BLE SDK · 接入指南 · 照着 README 走一遍'
   };
 
   var current = null;
@@ -839,12 +1002,13 @@ task.send(
     showView(el.getAttribute('data-view'), at >= 0 ? href.slice(at) : '');
   });
 
-  var m = location.search.match(/[?&]view=(home|arch|api)/);
+  var m = location.search.match(/[?&]view=(home|arch|guide|api)/);
   var name = m ? m[1] : '';
   var hash = location.hash;
+  if (name === 'api') name = 'guide';
   if (!name) {
     if (/^#s(10|[1-9])$/.test(hash)) name = 'arch';
-    else if (/^#(sdk|task|cmd|result|enum|scan)$/.test(hash)) name = 'api';
+    else if (/^#(g-[a-z]+|sdk|task|cmd|result|enum|scan)$/.test(hash)) name = 'guide';
     else name = 'home';
   }
   showView(name, hash);
