@@ -653,7 +653,7 @@ dependencies {
 
 <section id="g-scan">
   <div class="hd"><span class="no">04</span><h2>扫描设备</h2></div>
-  <p class="lead">拿到设备对象，或者只记下 MAC 也行。</p>
+  <p class="lead">拿到设备对象，或者只记下 MAC 也行。不先扫描直接发命令也可以。</p>
   <div class="plate">
     <pre><code>QingzhuSdk.startScan(new QSdk.ScanListener() {
     @Override public void onDevices(List&lt;QDevice&gt; devices) {
@@ -675,6 +675,8 @@ QingzhuSdk.startScan(
         .build(),
     listener);</code></pre>
     <div class="note warn"><b>列表去重用 <code>getStableId()</code>，不要只用 MAC。</b>地址轮换的设备 MAC 会变，稳定身份不变。</div>
+    <div class="note danger"><b>扫描不会自动结束，由业务负责收尾。</b>只给 MAC 时，<code>send()</code> 会自动打开扫描寻人，找到后连接、发送；但任务层不会主动停扫描，默认 <code>ble.scanTimeoutSec = 0</code> 表示持续扫描不停止。这是为了保持设备发现与重寻址的效率。请在退出界面、登出或应用退到后台等时机，主动调用 <code>QingzhuSdk.stopScan()</code>。</div>
+    <div class="note warn"><b>关扫描前先确认没有任务在寻人。</b><code>stopScan()</code> 会直接停掉底层扫描，正在 <code>SEARCHING</code> 的任务不会重新拉起扫描，只能等 30 秒超时后重试。尽量在任务都结束或取消之后再关。</div>
   </div>
 </section>
 
@@ -874,6 +876,7 @@ task.delete();      <span class="cm">// 换：取消 + 断开 + 从池里移除<
     <div class="note danger"><b><code>send</code> 不是线程安全的。</b>子线程并发调用要自己串行化，否则可能两条命令同时发。</div>
     <div class="note warn"><b>任务不会自动回收。</b>长期运行的服务要定时 <code>deleteTask</code>，否则任务池只增不减。</div>
     <div class="note warn"><b>没有设备主动上报通路。</b><code>QTask</code> 没有 <code>listen</code>，设备主动推送暂时收不到。</div>
+    <div class="note warn"><b>扫描不会自动停止。</b>任务 <code>send</code> 可自动开扫描寻人，但任务层不负责关；默认持续扫描，业务需在退出界面、登出等时机主动 <code>stopScan()</code>。</div>
     <div class="note"><b>只有 Android 实现。</b><code>BleAdapter</code> 是平台抽象，但目前只有一份实现。</div>
   </div>
 </section>
