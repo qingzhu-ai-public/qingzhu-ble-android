@@ -539,11 +539,14 @@ for (String mac : macs) {
 | 待办已满 | `send` | 回调 `TaskStage.BUSY` |
 | 任务已删除 | 任意 | 回调 `TaskStage.CLOSED` |
 
-每台设备默认最多排队 8 条：
+每台设备默认最多排队 10,000 条；需要收紧上限或关闭排队时再显式设置：
 
 ```java
-QingzhuSdk.setMaxPendingIntents(8);
+QingzhuSdk.setMaxPendingIntents(10_000); // 默认值
+QingzhuSdk.setMaxPendingIntents(0);      // 0 = 忙碌时直接失败，不排队
 ```
+
+队列的 `offer / poll / size / clear` 由底层同步保护，容量判断和入队是原子操作；队列满时命令不会被静默丢弃，而是回调 `TaskStage.BUSY`。
 
 ![Qingzhu BLE 命令仲裁](docs/images/intent-gate.png)
 
@@ -575,7 +578,7 @@ task.delete();      // 取消当前操作、断开连接，并从任务池移除
 QingzhuSdk.setMaxConnections(0);        // 0 = 按设备建议值，1-N = 手动固定
 QingzhuSdk.setMaxTransfers(1);          // 1 = 串行传输
 QingzhuSdk.setMaxRetries(3);            // 连接/发送/寻人失败重试次数
-QingzhuSdk.setMaxPendingIntents(8);     // 每设备待执行命令数
+QingzhuSdk.setMaxPendingIntents(10_000); // 每设备待执行命令数（默认 10,000）
 QingzhuSdk.setConnectCallbackTimeoutMs(20_000); // GATT 连接回调兜底
 
 int currentCapacity = QingzhuSdk.getConcurrency();
@@ -586,6 +589,58 @@ int currentCapacity = QingzhuSdk.getConcurrency();
 > `setMaxConnections(0)` 只在初始化时取一次建议值，不会根据运行结果自动调整。需要更高或更低的并发，请手动指定。
 
 ![Qingzhu BLE 多设备调度](docs/images/scheduling.png)
+
+#### 11.1 网关场景：云端指令 → 多设备转发
+
+适用于 App/门店盒子常驻运行，云端通过 MQTT、HTTP 或 WebSocket 下发指令，本地再转发给多台设备的场景。
+
+```text
+云端指令队列
+    ↓ MQTT / HTTP
+App 网关调度层
+    ↓ QingzhuSdk.getTask / createTask
+每台设备一个 QTask（任务内 FIFO）
+    ↓
+BLE 连接 → 发送 → 回显 → 回执云端
+```
+
+```java
+public void dispatch(CloudCommand cmd) {
+    // 复用已有任务；createTask 会先删除旧任务，直接调用会清空该设备排队中的指令
+    QTask task = QingzhuSdk.getTask(cmd.mac);
+    if (task == null) {
+        task = QingzhuSdk.createTask(cmd.mac);
+    }
+
+    QCommand command = QCommand.builder()
+            .send(cmd.payload)
+            .keepConnected()   // 常驻网关可保持连接
+            .build();
+
+    task.send(command, result -> {
+        if (result.isSuccess()) {
+            cloud.ack(cmd.id, result.payload());   // payload 是设备回显，可能为 null
+        } else if (result.stage() == TaskStage.BUSY) {
+            cloud.requeue(cmd.id);                 // 待办队列满，未被接受
+        } else {
+            cloud.fail(cmd.id, result.stage(), result.error());
+        }
+    });
+}
+```
+
+网关场景的边界：
+
+| 项目 | 说明 |
+|---|---|
+| 排队粒度 | 每台设备一个 `QTask`，同一设备 FIFO、同一时刻只发一条 |
+| 默认上限 | 每台设备 10,000 条待发送命令，可用 `setMaxPendingIntents` 调整 |
+| 跨设备并发 | 由 `setMaxConnections` / `setMaxTransfers` 控制，不同设备可并行 |
+| 队列满 | `send` 回调 `TaskStage.BUSY`，不会覆盖或丢弃已接受的命令 |
+| 回调线程 | `TaskCallback` 在主线程回调，可直接更新 UI 或发送云端回执 |
+| 进程重启 | 队列在内存中，重启后丢失；云端需保留未确认指令并重新投递 |
+
+云端重试时建议携带业务 `cmd.id` 做幂等去重；同一台设备的指令不要并发调用 `createTask` 替换任务。
 
 ### 12. 自定义协议
 

@@ -270,7 +270,7 @@ public final class QSdk {
         taskPool.setMaxRetries(n);
     }
 
-    /** 每台设备最多排队多少条待执行命令；0 = 忙碌时直接失败。默认 8。 */
+    /** 每台设备最多排队多少条待执行命令；0 = 忙碌时直接失败。默认 10,000。 */
     public void setMaxPendingIntents(int n) {
         ensureInit();
         taskPool.setMaxPendingIntents(n);

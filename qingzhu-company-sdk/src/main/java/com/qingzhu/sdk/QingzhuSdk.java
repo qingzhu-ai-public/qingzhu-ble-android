@@ -156,7 +156,7 @@ public final class QingzhuSdk {
         QSdk.getInstance().setMaxRetries(n);
     }
 
-    /** 每台设备最多排队多少条待执行命令，默认 8；0 表示忙碌时直接失败 */
+    /** 每台设备最多排队多少条待执行命令，默认 10,000；0 表示忙碌时直接失败 */
     public static void setMaxPendingIntents(int n) {
         QSdk.getInstance().setMaxPendingIntents(n);
     }

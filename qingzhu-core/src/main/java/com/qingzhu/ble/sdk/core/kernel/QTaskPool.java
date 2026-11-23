@@ -44,7 +44,8 @@ public final class QTaskPool {
 
     private static final int DEFAULT_MAX_TRANSFERS = 1;
     private static final int DEFAULT_MAX_RETRIES = 3;
-    private static final int DEFAULT_MAX_PENDING_INTENTS = 8;
+    /** 每台设备默认待发送队列上限；显式调大，避免批量/高频指令被 BUSY 拒绝 */
+    private static final int DEFAULT_MAX_PENDING_INTENTS = 10_000;
     /** 寻人（searching）超时：只给 mac 的任务在这么长时间内没被扫描匹配到，算一次失败（触发重试） */
     private static final long SEARCH_TIMEOUT_MS = 30_000L;
     /** 失败后自动重试的间隔（给从机复位 / 链路喘息） */
