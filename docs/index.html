@@ -16,59 +16,116 @@
 html{scroll-behavior:smooth;scroll-padding-top:32px}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 var(--sans);-webkit-font-smoothing:antialiased}
 
+/* 侧栏：主视图 + 本页目录 */
 .side{position:fixed;inset:0 auto 0 0;width:236px;overflow-y:auto;background:#fff;border-right:1px solid var(--line);padding:28px 14px;z-index:20}
 .side b{display:block;font-size:14px;padding:0 10px}
 .side em{display:block;font:400 10.5px/1.8 var(--mono);color:#AEB8C8;letter-spacing:.15em;font-style:normal;padding:0 10px;margin-top:3px;text-transform:uppercase}
 .side nav{margin-top:22px;display:flex;flex-direction:column;gap:1px}
-.side a{display:flex;gap:9px;align-items:baseline;padding:7px 10px;border-radius:6px;color:#4A5568;text-decoration:none;font-size:13px;transition:.15s}
+.side a{display:flex;gap:9px;align-items:baseline;padding:7px 10px;border-radius:6px;color:#4A5568;text-decoration:none;font-size:13px;transition:.15s;cursor:pointer}
 .side a i{font:600 10px var(--mono);color:#C3CCDB;font-style:normal}
 .side a:hover{background:#F5F8FD;color:var(--blue)}
 .side a.on{background:var(--blue-bg);color:var(--blue);font-weight:600}
 .side a.on i{color:var(--blue)}
 .side .sep{margin:16px 10px 6px;font:600 10px var(--mono);letter-spacing:.14em;color:#C3CCDB;text-transform:uppercase}
+.side #toc a{font-size:12.5px;padding:5px 10px}
 
-.main{margin-left:236px;padding:0 48px 110px}
-.wrap{max-width:920px;margin:0 auto}
+.main{margin-left:236px;padding:0 48px 120px}
+.wrap{max-width:960px;margin:0 auto}
+.view[hidden]{display:none !important}
 
 .hero{padding:88px 0 26px}
 .hero h1{font-size:42px;line-height:1.18;margin:0;letter-spacing:-.03em;font-weight:700}
 .hero h1 span{color:#AEB8C8;font-weight:400}
-.hero p{margin:20px 0 0;font-size:16.5px;color:#4A5568;max-width:700px;line-height:1.8}
+.hero p{margin:20px 0 0;font-size:16.5px;color:#4A5568;max-width:720px;line-height:1.8}
 .tags{display:flex;gap:8px;margin-top:24px;flex-wrap:wrap}
 .tag{font:500 12px var(--mono);color:#5A6779;background:#fff;border:1px solid var(--line);padding:5px 11px;border-radius:5px}
 
-section{padding:48px 0;border-top:1px solid var(--line)}
+section{padding:54px 0;border-top:1px solid var(--line)}
 .hd{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
 .hd .no{font:600 12px var(--mono);color:#C3CCDB;letter-spacing:.1em}
-.hd h2{font-size:22px;margin:0;letter-spacing:-.01em;font-weight:650}
-.lead{margin:0 0 20px;font-size:14px;color:var(--soft);max-width:760px}
+.hd h2{font-size:23px;margin:0;letter-spacing:-.01em;font-weight:650}
+.lead{margin:0 0 22px;font-size:14px;color:var(--soft);max-width:780px}
+.cap{margin:16px 0 0;font-size:13px;line-height:1.7;color:var(--soft);text-align:center}
+.cap a{color:var(--blue);text-decoration:none}
 
 /* 入口卡片 */
 .entries{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.en{display:block;background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px 20px;text-decoration:none;color:inherit;transition:.18s}
+.en{display:block;background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px 20px;text-decoration:none;color:inherit;transition:.18s;cursor:pointer}
 .en:hover{border-color:var(--blue-line);box-shadow:0 4px 18px rgba(47,107,224,.08);transform:translateY(-2px)}
 .en .k{font:600 10.5px var(--mono);letter-spacing:.12em;color:#C3CCDB;text-transform:uppercase}
 .en h3{margin:8px 0 6px;font-size:16px;font-weight:650}
 .en p{margin:0;font-size:12.5px;color:#6C7889;line-height:1.6}
 
-.plate{background:#fff;border:1px solid var(--line);border-radius:14px;padding:30px 26px}
-.cap{margin:14px 0 0;font-size:12.5px;color:var(--soft);text-align:center}
+.plate{background:#fff;border:1px solid var(--line);border-radius:14px;padding:32px 28px}
 
-/* 概念 */
-.twoq{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.qbox{border:1px solid var(--line);border-radius:10px;padding:16px;background:#FBFCFE}
-.qbox h4{margin:0 0 4px;font:600 13px var(--mono);color:#1B4BA8}
-.qbox p{margin:0 0 12px;font-size:12px;color:var(--soft);line-height:1.5}
+/* 依赖/流程通用 */
+.col{display:flex;flex-direction:column;align-items:center}
+.row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.nd{border:1px solid var(--line);background:#fff;border-radius:9px;padding:10px 16px;text-align:center;font:600 13px var(--mono);line-height:1.5;white-space:nowrap}
+.nd small{display:block;font:400 11.5px var(--sans);color:var(--soft);margin-top:1px}
+.nd.dash{border-style:dashed;color:#5A6779}
+.nd.blue{background:var(--blue-bg);border-color:var(--blue-line);color:#1B4BA8}
+.nd.blue small{color:#5F7FB5}
+.nd.dark{background:var(--dark);border-color:var(--dark);color:#E8F0FC}
+.nd.dark small{color:#8CA0BE}
+.nd.amber{background:#FFF7EA;border-color:#F3DFBB;color:#9C5E00}
+.nd.amber small{color:#A8762A}
+.lnk{display:flex;align-items:center;gap:10px;color:#9BA8BB;font-size:11.5px;margin:10px 0}
+.lnk::before,.lnk::after{content:'';width:48px;height:1px;background:linear-gradient(90deg,transparent,#D3DBE8)}
+.lnk::after{background:linear-gradient(90deg,#D3DBE8,transparent)}
+
+/* 两级队列 */
+.twoq{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.qbox{border:1px solid var(--line);border-radius:11px;padding:18px;background:#FBFCFE}
+.qbox h4{margin:0 0 4px;font:600 13.5px var(--mono);color:#1B4BA8}
+.qbox p{margin:0 0 14px;font-size:12px;color:var(--soft);line-height:1.5}
 .slot{border:1px solid var(--line);background:#fff;border-radius:7px;padding:8px 11px;font:500 11.5px var(--mono);color:#4A5568;display:flex;justify-content:space-between;gap:8px}
 .slot b{color:var(--ink);font-weight:600}
 .slot.act{border-color:var(--blue-line);background:var(--blue-bg)}
 .slot + .slot{margin-top:6px}
 .slot em{font-style:normal;color:#A9B4C4;font-size:10.5px}
 
-code{font-family:var(--mono);font-size:.9em;background:#EDF1F8;color:#1B3A6B;padding:1.5px 5px;border-radius:4px;white-space:nowrap}
-pre{background:#0D1524;color:#D5DFEF;padding:18px 20px;border-radius:10px;overflow-x:auto;margin:16px 0 0;font:13px/1.85 var(--mono);border:1px solid #1B2941}
-pre code{background:none;color:inherit;padding:0;font-size:inherit;white-space:pre}
-pre .cm{color:#6B7F9C}
+/* 分层条 */
+.tiers{display:flex;flex-direction:column;gap:7px}
+.tier{display:flex;align-items:center;gap:12px}
+.tier .side-lbl{font:500 10.5px var(--mono);color:#B8C3D4;width:72px;text-align:right;letter-spacing:.04em}
+.tier .bar{flex:1;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 15px;border-radius:7px;border:1px solid var(--line);background:#fff}
+.tier .pk{font:600 12.5px var(--mono);color:#2B4E8F}
+.tier .ds{font-size:12.5px;color:#6C7889}
+.tier.l1 .bar{background:#F3F7FE;border-color:#DDE8FA}
+.tier.l2 .bar{background:#EDF2FB;border-color:#D6E2F6}
+.tier.l3 .bar{background:#E5ECF8;border-color:#CBD9F2}
+.tier.hot .bar{background:#FFF7EA;border-color:#F3DFBB}
+.tier.hot .pk{color:#9C5E00}
+.tier.l5 .bar{background:#152238;border-color:#152238}
+.tier.l5 .pk{color:#9DB8E4}.tier.l5 .ds{color:#7E93B4}
+
+/* 状态链 */
+.chain{display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
+.st{position:relative;flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:10px 6px;text-align:center;background:#fff}
+.st b{display:block;font:600 11.5px var(--mono)}
+.st small{display:block;font-size:10.5px;color:var(--soft);margin-top:2px;line-height:1.4}
+.st.idle{background:#FAFBFD;border-color:#E6EBF4}
+.st.idle b{color:#7A8699}
+.st.run{background:var(--blue-bg);border-color:var(--blue-line)}
+.st.run b{color:#1B4BA8}
+.st:not(:first-child)::before{content:'';position:absolute;left:-22px;top:50%;width:22px;height:1px;background:#D3DBE8}
+.st:not(:first-child)::after{content:'';position:absolute;left:-5px;top:50%;margin-top:-3px;border:3px solid transparent;border-left-color:#C3CCDB}
+.loop{margin-top:22px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:12.5px;color:#9C5E00;background:#FFF9EF;border:1px dashed #F0DCB8;border-radius:8px;padding:9px 14px}
+
+/* 步骤流 */
+.flow{display:flex;flex-direction:column}
+.fs{display:grid;grid-template-columns:32px 1fr;gap:14px;position:relative;padding-bottom:13px}
+.fs:last-child{padding-bottom:0}
+.fs::before{content:'';position:absolute;left:15px;top:28px;bottom:0;width:1px;background:#DEE5F0}
+.fs:last-child::before{display:none}
+.fs .dot{width:31px;height:31px;border-radius:50%;border:1px solid var(--blue-line);background:var(--blue-bg);color:#1B4BA8;font:600 11px var(--mono);display:flex;align-items:center;justify-content:center;z-index:1}
+.fs .bd{border:1px solid var(--line);border-radius:9px;padding:9px 14px;background:#fff;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.fs .bd b{font:600 12.5px var(--mono)}
+.fs .bd small{font-size:12px;color:#6C7889;line-height:1.5}
+.fs.key .dot{background:#FFF7EA;border-color:#F3DFBB;color:#9C5E00}
+.fs.end .dot{background:#EDF7F1;border-color:#C9E7D8;color:#0E7A55}
+.fs.bad .dot{background:#FDECEA;border-color:#F5C9C2;color:#B33325}
 
 /* 表格 */
 .tw{overflow-x:auto;margin:16px 0 0;border:1px solid var(--line);border-radius:10px;background:#fff}
@@ -76,21 +133,55 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 th{text-align:left;font-weight:600;color:var(--ink);background:#FAFBFE;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;font-size:12.5px}
 td{padding:10px 14px;border-bottom:1px solid var(--line2);color:#4A5568;vertical-align:top;line-height:1.6}
 tr:last-child td{border-bottom:0}
+td:first-child{white-space:nowrap}
+td code,th code{font-size:.92em}
 
+code{font-family:var(--mono);font-size:.9em;background:#EDF1F8;color:#1B3A6B;padding:1.5px 5px;border-radius:4px;white-space:nowrap}
+pre{background:#0D1524;color:#D5DFEF;padding:18px 20px;border-radius:10px;overflow-x:auto;margin:16px 0 0;font:13px/1.85 var(--mono);border:1px solid #1B2941}
+pre code{background:none;color:inherit;padding:0;font-size:inherit;white-space:pre}
+pre .cm{color:#6B7F9C}
+
+/* 提示 */
 .note{border-left:3px solid var(--blue);background:#F4F8FF;padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0 0;font-size:13.5px;color:#4A5568;line-height:1.7}
 .note.warn{border-left-color:var(--amber);background:#FFF9EF}
 .note.danger{border-left-color:var(--red);background:#FFF5F4}
+.note.ok{border-left-color:var(--green);background:#F2FBF6}
 .note b{color:var(--ink)}
 
-.foot{padding:36px 0 0;color:#AEB8C8;font-size:12px;text-align:center;border-top:1px solid var(--line);margin-top:8px}
+/* 卡片 */
+.cards{display:grid;gap:12px;margin-top:16px}
+.cards.c2{grid-template-columns:1fr 1fr}
+.cards.c3{grid-template-columns:repeat(3,1fr)}
+.card{background:#fff;border:1px solid var(--line);border-radius:9px;padding:15px 17px}
+.card h4{margin:0 0 6px;font-size:13.5px;font-weight:650}
+.card p{margin:0;font-size:12.5px;line-height:1.65;color:#5A6779}
+.card .idx{font:600 10.5px var(--mono);color:#B8C3D4;letter-spacing:.1em;display:block;margin-bottom:5px}
+
+/* 数字 */
+.stats{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}
+.stat{flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:12px 14px;background:#FAFBFD;text-align:center}
+.stat b{display:block;font:700 21px/1.2 var(--mono);color:var(--dark);letter-spacing:-.02em}
+.stat small{display:block;font-size:10.5px;color:var(--soft);margin-top:3px;line-height:1.4}
+
+/* 标记 */
+.b{display:inline-block;padding:1px 6px;border-radius:4px;font:600 10.5px var(--mono);letter-spacing:.03em;vertical-align:1px;white-space:nowrap}
+.b.ok{background:#E4F6EE;color:#0B7A53}
+.b.no{background:#FCEAE8;color:#B33325}
+.b.wip{background:#FFF2DC;color:#9C5E00}
+.b.n{background:#EDF1F8;color:#4A5A73}
+
+.foot{padding:40px 0 0;color:#AEB8C8;font-size:12px;text-align:center;border-top:1px solid var(--line);margin-top:10px}
 
 @media (max-width:1080px){
   .side{display:none}
-  .main{margin-left:0;padding:0 20px 70px}
+  .main{margin-left:0;padding:0 20px 80px}
   .hero{padding:56px 0 20px}.hero h1{font-size:31px}
-  .entries{grid-template-columns:1fr}
-  .twoq{grid-template-columns:1fr}
-  .plate{padding:20px 16px}
+  .entries,.twoq,.cards.c2,.cards.c3{grid-template-columns:1fr}
+  .tier .side-lbl{display:none}
+  .plate{padding:22px 16px}
+  .chain{gap:8px}
+  .st{flex:1 1 40%;min-width:0}
+  .st:not(:first-child)::before,.st:not(:first-child)::after{display:none}
 }
 </style>
 </head>
@@ -98,19 +189,24 @@ tr:last-child td{border-bottom:0}
 
 <aside class="side">
   <b>青竹 BLE SDK</b><em>Docs</em>
+  <nav id="viewnav">
+    <a href="?view=home" data-view="home" class="on"><i>01</i>首页</a>
+    <a href="?view=arch" data-view="arch"><i>02</i>架构全景</a>
+    <a href="?view=api" data-view="api"><i>03</i>API 速查</a>
+  </nav>
+  <div class="sep">本页目录</div>
+  <nav id="toc"></nav>
+  <div class="sep">External</div>
   <nav>
-    <a href="index.html" class="on"><i>01</i>首页</a>
-    <a href="architecture.html"><i>02</i>架构全景</a>
-    <a href="api.html"><i>03</i>API 速查</a>
-    <a href="#start"><i>04</i>快速接入</a>
-    <a href="#limits"><i>05</i>已知边界</a>
-    <div class="sep">External</div>
     <a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android" target="_blank" rel="noopener"><i>↗</i>源码仓库</a>
     <a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android#readme" target="_blank" rel="noopener"><i>↗</i>完整 README</a>
   </nav>
 </aside>
 
 <main class="main"><div class="wrap">
+
+<!-- ============ 首页 ============ -->
+<div class="view" id="view-home" data-view="home">
 
 <header class="hero">
   <h1>青竹 BLE SDK<br><span>文档</span></h1>
@@ -123,16 +219,16 @@ tr:last-child td{border-bottom:0}
   </div>
 </header>
 
-<section>
+<section id="home-intro">
   <div class="hd"><span class="no">01</span><h2>从这里开始</h2></div>
   <p class="lead">先看结构，再看接口，最后照示例写。</p>
   <div class="entries">
-    <a class="en" href="architecture.html">
+    <a class="en" href="?view=arch" data-view="arch">
       <span class="k">Architecture</span>
       <h3>架构全景</h3>
       <p>三级结构、两个队列、状态机、各场景内部流程。</p>
     </a>
-    <a class="en" href="api.html">
+    <a class="en" href="?view=api" data-view="api">
       <span class="k">Reference</span>
       <h3>API 速查</h3>
       <p>门面、任务、命令、结果类型的全部公开方法。</p>
@@ -145,7 +241,7 @@ tr:last-child td{border-bottom:0}
   </div>
 </section>
 
-<section>
+<section id="home-queues">
   <div class="hd"><span class="no">02</span><h2>两个队列，别混在一起</h2></div>
   <p class="lead">任务池装设备，指令队列装命令。跨任务并行，任务内串行。</p>
   <div class="plate">
@@ -167,7 +263,7 @@ tr:last-child td{border-bottom:0}
     </div>
     <div class="note"><b>一个任务里可以有上万条命令</b>，但一台设备同一时刻只发一条。真正的并发发生在任务之间，受连接容量限制。</div>
   </div>
-  <p class="cap">详见 架构全景 · 第 02 节</p>
+  <p class="cap"><a href="?view=arch#s2" data-view="arch">详见 架构全景 · 第 02 节</a></p>
 </section>
 
 <section id="start">
@@ -196,7 +292,7 @@ task.send(
   <p class="cap">完整接入步骤见 README 的「接入文档」一节</p>
 </section>
 
-<section>
+<section id="home-numbers">
   <div class="hd"><span class="no">04</span><h2>关键数字</h2></div>
   <p class="lead">来自当前源码的默认值。</p>
   <div class="plate">
@@ -226,9 +322,535 @@ task.send(
   </div>
 </section>
 
-<div class="foot">青竹 BLE SDK · 文档 · 内容对照 qingzhu-core 源码</div>
+</div>
+
+<!-- ============ 架构全景 ============ -->
+<div class="view" id="view-arch" data-view="arch" hidden>
+
+<header class="hero">
+  <h1>青竹 BLE SDK<br><span>架构全景</span></h1>
+  <p>一台设备一个任务，任务里排命令。任务池管设备，指令队列管顺序。</p>
+  <div class="tags">
+    <span class="tag">任务驱动</span>
+    <span class="tag">两级队列</span>
+    <span class="tag">协议插件化</span>
+    <span class="tag">JSON to JSON</span>
+  </div>
+</header>
+
+<section id="s1">
+  <div class="hd"><span class="no">01</span><h2>三级结构</h2></div>
+  <p class="lead">共享资源只有一份，任务每设备一个，指令在任务内部排队。</p>
+  <div class="plate">
+    <div class="col">
+      <div class="nd dash">业务 / MQTT / 界面<small>只表达要对哪台设备做什么</small></div>
+      <div class="lnk">调用</div>
+      <div class="nd blue">QSdk 门面<small>QingzhuSdk / MinewESLSdk</small></div>
+      <div class="lnk">转发</div>
+      <div class="nd dark">QTaskPool 任务池<small>装 N 个任务，一台设备一个</small></div>
+    </div>
+
+    <div class="tiers" style="margin-top:26px">
+      <div class="tier l3">
+        <div class="side-lbl">每设备</div>
+        <div class="bar"><span class="pk">TaskImpl 任务</span><span class="ds">状态机 + 当前命令 + 指令队列</span></div>
+      </div>
+      <div class="tier l2">
+        <div class="side-lbl">共享</div>
+        <div class="bar"><span class="pk">ConnectionPool</span><span class="ds">最多 7 条连接，无界排队，建连串行</span></div>
+      </div>
+      <div class="tier l2">
+        <div class="side-lbl"></div>
+        <div class="bar"><span class="pk">ScanEngine</span><span class="ds">扫描、识别、地址缓存</span></div>
+      </div>
+      <div class="tier l2">
+        <div class="side-lbl"></div>
+        <div class="bar"><span class="pk">传输窗口</span><span class="ds">Semaphore 默认 1，全局串行发送</span></div>
+      </div>
+      <div class="tier l2">
+        <div class="side-lbl"></div>
+        <div class="bar"><span class="pk">ActionRouter</span><span class="ds">按 protocolId 找到协议的 ActionHandler</span></div>
+      </div>
+      <div class="tier l5">
+        <div class="side-lbl">系统</div>
+        <div class="bar"><span class="pk">AndroidGattClient</span><span class="ds">真正碰 BluetoothGatt 的地方</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">设备再多，中间四项也只有一份</p>
+</section>
+
+<section id="s2">
+  <div class="hd"><span class="no">02</span><h2>两个队列，别混在一起</h2></div>
+  <p class="lead">任务池是集合，不是队列；真正的队列在任务内部。</p>
+  <div class="plate">
+    <div class="twoq">
+      <div class="qbox">
+        <h4>任务池 QTaskPool</h4>
+        <p>装设备。无序，各自推进，互不等待。</p>
+        <div class="slot"><b>设备 A</b><em>SENDING</em></div>
+        <div class="slot"><b>设备 B</b><em>QUEUED</em></div>
+        <div class="slot"><b>设备 C</b><em>READY</em></div>
+        <div class="slot"><b>设备 D</b><em>SEARCHING</em></div>
+      </div>
+      <div class="qbox">
+        <h4>指令队列 PendingIntentQueue</h4>
+        <p>装命令。先进先出，同一设备严格串行。</p>
+        <div class="slot act"><b>命令 1</b><em>执行中</em></div>
+        <div class="slot"><b>命令 2</b><em>等待</em></div>
+        <div class="slot"><b>命令 3</b><em>等待</em></div>
+        <div class="slot"><b>…</b><em>默认上限 10000</em></div>
+      </div>
+    </div>
+    <div class="note"><b>关键：</b>一个任务里可以有 10000 条命令，但一台设备同一时刻只发一条。跨任务才可能并发（受 7 条连接和传输窗口限制）。</div>
+  </div>
+  <p class="cap">任务之间并行推进，任务内部串行执行</p>
+</section>
+
+<section id="s3">
+  <div class="hd"><span class="no">03</span><h2>任务状态机</h2></div>
+  <p class="lead">状态是任务自己的，另一台设备有另一条轨迹。</p>
+  <div class="plate">
+    <div class="chain">
+      <div class="st idle"><b>UNKNOWN</b><small>只有 mac</small></div>
+      <div class="st idle"><b>READY</b><small>有设备未连</small></div>
+      <div class="st run"><b>QUEUED</b><small>等窗口/重试</small></div>
+      <div class="st run"><b>CONNECTING</b><small>建连中</small></div>
+      <div class="st run"><b>CONNECTED</b><small>已连接</small></div>
+      <div class="st run"><b>SENDING</b><small>发数据</small></div>
+    </div>
+    <div class="loop"><span>连接失败 / 发送失败 / 寻人超时</span><b>→ QUEUED，1.5 秒</b><span>最多重试 3 次</span></div>
+  </div>
+  <p class="cap">没有 FAILED 状态，失败后回到 READY 或 UNKNOWN；失败阶段看 TaskStage</p>
+</section>
+
+<section id="s4">
+  <div class="hd"><span class="no">04</span><h2>一条指令进来，只有四种去向</h2></div>
+  <p class="lead">前三件事都是确定的，只有最后一种会丢指令。</p>
+  <div class="plate">
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:170px">任务当前状态</th><th>新指令的结局</th><th style="width:130px">是否丢</th></tr></thead>
+        <tbody>
+          <tr><td>已被删除</td><td>立即回调 <code>CLOSED</code></td><td><span class="b no">丢</span></td></tr>
+          <tr><td>空闲</td><td>立即执行，状态往前推</td><td><span class="b ok">不丢</span></td></tr>
+          <tr><td>忙碌</td><td>进指令队列，等前一条完成</td><td><span class="b ok">不丢</span></td></tr>
+          <tr><td>队列已满</td><td>立即回调 <code>BUSY</code></td><td><span class="b no">丢</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note ok"><b>队列上限已从 8 调到 10000。</b>正常业务下 <code>BUSY</code> 几乎不会再出现，剩下唯一会丢的情况是任务已被删除。</div>
+  </div>
+  <p class="cap">队列只影响等待，不影响顺序</p>
+</section>
+
+<section id="s5">
+  <div class="hd"><span class="no">05</span><h2>场景一：单个设备配置</h2></div>
+  <p class="lead">内核里只多了一个任务、一次建连。</p>
+  <div class="plate">
+    <div class="flow">
+      <div class="fs"><div class="dot">01</div><div class="bd"><b>getTask(mac)</b><small>没有才 createTask，拿到任务句柄</small></div></div>
+      <div class="fs"><div class="dot">02</div><div class="bd"><b>send(cmd, cb)</b><small>任务空闲，直接执行</small></div></div>
+      <div class="fs key"><div class="dot">03</div><div class="bd"><b>ConnectionPool</b><small>申请一条连接，闸门放行后建连</small></div></div>
+      <div class="fs"><div class="dot">04</div><div class="bd"><b>传输窗口</b><small>拿到许可，写入特征值</small></div></div>
+      <div class="fs end"><div class="dot">05</div><div class="bd"><b>TaskResult</b><small>回调主线程，成功就退出页面</small></div></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>1</b><small>任务</small></div>
+      <div class="stat"><b>1</b><small>连接</small></div>
+      <div class="stat"><b>1</b><small>指令队列</small></div>
+    </div>
+  </div>
+  <p class="cap">退出页面别急着 deleteTask，下次进来还要用</p>
+</section>
+
+<section id="s6">
+  <div class="hd"><span class="no">06</span><h2>场景二：批量配置</h2></div>
+  <p class="lead">N 台就是 N 个任务，一台失败不影响其他。</p>
+  <div class="plate">
+    <div class="flow">
+      <div class="fs"><div class="dot">01</div><div class="bd"><b>去重</b><small>按 MAC 转大写去重，total 用它算</small></div></div>
+      <div class="fs"><div class="dot">02</div><div class="bd"><b>循环 send</b><small>每台 getTask，没有才 createTask</small></div></div>
+      <div class="fs key"><div class="dot">03</div><div class="bd"><b>连接池排队</b><small>7 条并发，其余进无界队列等槽位</small></div></div>
+      <div class="fs"><div class="dot">04</div><div class="bd"><b>逐个回调</b><small>主线程，计数 done == total</small></div></div>
+      <div class="fs end"><div class="dot">05</div><div class="bd"><b>全部结束</b><small>汇总成功与失败，再退出</small></div></div>
+    </div>
+    <div class="note warn"><b>必须先去重。</b>重复项会让同一台设备被配多次或任务被反复替换，且 <code>total</code> 与回调次数对不上。</div>
+  </div>
+  <p class="cap">100 台约等于 100 除以 7，再乘单台耗时</p>
+</section>
+
+<section id="s7">
+  <div class="hd"><span class="no">07</span><h2>重复设备，与反复重进页面</h2></div>
+  <p class="lead">两件事结论相反：重复项要合并，重进页面要换新任务。</p>
+  <div class="plate">
+    <div class="twoq">
+      <div class="qbox">
+        <h4>重复 MAC：用 getTask</h4>
+        <p>同一个任务，指令进队列，全部执行。</p>
+        <div class="slot act"><b>命令 1</b><em>执行中</em></div>
+        <div class="slot"><b>命令 2</b><em>排队</em></div>
+        <div class="slot"><b>命令 3</b><em>排队</em></div>
+      </div>
+      <div class="qbox">
+        <h4>重复 MAC：用 createTask</h4>
+        <p>每次换任务，前面被删，只留最后一条。</p>
+        <div class="slot"><b>任务 1</b><em>已删</em></div>
+        <div class="slot"><b>任务 2</b><em>已删</em></div>
+        <div class="slot act"><b>任务 3</b><em>执行中</em></div>
+      </div>
+    </div>
+    <div class="note danger"><b>重进页面是例外，必须用 createTask。</b>Android 销毁页面可能晚于新页面启动。旧页面清理的是自己那个 taskId，新任务 id 不同，才不会被误删。用 getTask 复用，旧页面一清理就断了新页面的连接。</div>
+    <div class="note"><b>配套写法：</b>清理时带 taskId，只删 id 匹配的那个。</div>
+  </div>
+  <p class="cap">同一页面内连续配置用 getTask，反复进出页面用 createTask</p>
+</section>
+
+<section id="s8">
+  <div class="hd"><span class="no">08</span><h2>场景四：网关持续下发</h2></div>
+  <p class="lead">MQTT 随时来指令，一个任务不断接。</p>
+  <div class="plate">
+    <div class="flow">
+      <div class="fs"><div class="dot">01</div><div class="bd"><b>MQTT 到达</b><small>子线程，不能直接调 send</small></div></div>
+      <div class="fs key"><div class="dot">02</div><div class="bd"><b>投递到主线程</b><small>保证 send 串行，避免两条指令同时发</small></div></div>
+      <div class="fs"><div class="dot">03</div><div class="bd"><b>getTask / createTask</b><small>设备已有任务就复用</small></div></div>
+      <div class="fs"><div class="dot">04</div><div class="bd"><b>send</b><small>进队列或立即执行，回调上报结果</small></div></div>
+      <div class="fs end"><div class="dot">05</div><div class="bd"><b>定时回收</b><small>空闲任务 deleteTask，防止只增不减</small></div></div>
+    </div>
+    <div class="note danger"><b>代码现状：<code>execute</code> 内部没有锁。</b>并发调用 <code>send</code> 可能都读到空闲，导致两条指令同时发、回包串在一起。必须由调用方串行化（统一投递主线程）。</div>
+    <div class="note warn"><b>任务不会自动回收。</b>每台设备建过的任务会一直留在池里，每次状态变化都要遍历全部任务生成快照，越跑越慢。</div>
+  </div>
+  <p class="cap">队列已够大，串行化和回收要自己保证</p>
+</section>
+
+<section id="s9">
+  <div class="hd"><span class="no">09</span><h2>取消与删除</h2></div>
+  <p class="lead">cancel 是停，delete 是换。不是同一个对象的两档冷热。</p>
+  <div class="plate">
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:150px">维度</th><th>cancel</th><th>delete</th></tr></thead>
+        <tbody>
+          <tr><td>任务对象</td><td>保留，id 不变</td><td>移除，下次是新 id</td></tr>
+          <tr><td>已发现的设备</td><td>保留</td><td>随任务一起丢</td></tr>
+          <tr><td>链路</td><td>回到操作开始前</td><td>一定断开</td></tr>
+          <tr><td>未完成指令</td><td>回调 <code>CANCEL</code></td><td>回调 <code>DELETE</code></td></tr>
+          <tr><td>观察者</td><td>仍然有效</td><td>一并清空</td></tr>
+          <tr><td>下次再发</td><td>直接 send</td><td>先 createTask</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note"><b>两个细节：</b>cancel 对空闲任务直接返回，什么都不做；delete 不挑状态，空闲也删，连着也会断开。</div>
+  </div>
+  <p class="cap">差在寻人和建连：cancel 保留设备信息，delete 只剩一个 MAC</p>
+</section>
+
+<section id="s10">
+  <div class="hd"><span class="no">10</span><h2>数字与边界</h2></div>
+  <div class="plate">
+    <div class="stats">
+      <div class="stat"><b>7</b><small>并发连接</small></div>
+      <div class="stat"><b>1</b><small>传输窗口</small></div>
+      <div class="stat"><b>10000</b><small>每设备指令队列</small></div>
+      <div class="stat"><b>∞</b><small>连接等待队列</small></div>
+      <div class="stat"><b>3</b><small>失败重试</small></div>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:260px">边界</th><th style="width:110px">状态</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>send</code> 线程安全</td><td><span class="b no">需调用方保证</span></td><td>内部无锁，并发调用可能串包</td></tr>
+          <tr><td>任务自动回收</td><td><span class="b no">未提供</span></td><td>需定时 deleteTask</td></tr>
+          <tr><td>状态通知开销</td><td><span class="b wip">O(n)</span></td><td>每次变化生成全量快照，上千任务会卡</td></tr>
+          <tr><td>排队超时</td><td><span class="b wip">无</span></td><td>连接队列里的请求要等前面全部完成</td></tr>
+          <tr><td>设备主动上报</td><td><span class="b no">未实现</span></td><td><code>QTask</code> 没有 listen</td></tr>
+          <tr><td>非 Android 平台</td><td><span class="b n">仅设计</span></td><td>BleAdapter 是抽象接口，只有一份实现</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p class="cap">数字来自当前源码：QTaskPool 与 ConnectionPool 的默认值</p>
+</section>
+
+</div>
+
+<!-- ============ API 速查 ============ -->
+<div class="view" id="view-api" data-view="api" hidden>
+
+<header class="hero">
+  <h1>API 速查</h1>
+  <p>全部公开方法，签名对照源码。示例用 Java，Kotlin 直接调用即可。</p>
+</header>
+
+<section id="sdk">
+  <div class="hd"><span class="no">01</span><h2>QingzhuSdk 门面</h2></div>
+  <p class="lead">静态方法，进程内单例。重复初始化幂等。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>方法</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td><code>init(Context)</code></td><td>初始化内核与适配器，注册 Eddystone 与 Generic 两个开源协议</td></tr>
+        <tr><td><code>registerProtocol(ProtocolPlugin)</code></td><td>注册协议插件，重复注册同一 id 幂等；注册后立即触发 <code>install()</code></td></tr>
+        <tr><td><code>getProtocols()</code></td><td>当前已装配的协议 id 列表</td></tr>
+        <tr><td><code>startScan(ScanListener)</code></td><td>开始扫描，默认参数</td></tr>
+        <tr><td><code>startScan(ScanOptions, ScanListener)</code></td><td>带过滤条件的扫描</td></tr>
+        <tr><td><code>stopScan()</code> / <code>restartScan()</code></td><td>停止 / 重启扫描</td></tr>
+        <tr><td><code>setScanStateListener(ScanStateListener)</code></td><td>监听扫描开关状态</td></tr>
+        <tr><td><code>createTask(String mac)</code></td><td>新建任务。<b>会先删除该设备已有任务</b></td></tr>
+        <tr><td><code>createTask(QDevice)</code></td><td>用扫描到的设备建任务，同样先删后建</td></tr>
+        <tr><td><code>getTask(String mac)</code></td><td>只查询，没有返回 <code>null</code></td></tr>
+        <tr><td><code>deleteTask(String mac)</code></td><td>取消、断开、从任务池移除</td></tr>
+        <tr><td><code>observeAll(Object owner, TaskListListener)</code></td><td>观察全部任务，注册后立即推一次全量快照</td></tr>
+        <tr><td><code>snapshots()</code></td><td>当前所有任务的不可变快照列表</td></tr>
+        <tr><td><code>setMaxConnections(int)</code></td><td>并发连接数。0 = 用体检建议值，1-N = 手动固定</td></tr>
+        <tr><td><code>setMaxTransfers(int)</code></td><td>传输窗口。1 = 串行，N = 最多 N 台同时发</td></tr>
+        <tr><td><code>setMaxRetries(int)</code></td><td>失败重试次数，默认 3</td></tr>
+        <tr><td><code>setMaxPendingIntents(int)</code></td><td>每设备指令队列上限，默认 10000；0 = 忙碌时直接失败</td></tr>
+        <tr><td><code>setConnectCallbackTimeoutMs(long)</code></td><td>系统连接回调兜底，默认 20 秒</td></tr>
+        <tr><td><code>getConcurrency()</code></td><td>当前生效的并发容量</td></tr>
+        <tr><td><code>settings()</code></td><td>全局设置中心，含协议声明的可配置项</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="task">
+  <div class="hd"><span class="no">02</span><h2>QTask 任务</h2></div>
+  <p class="lead">一台设备一个任务。所有读写方法都可随时调用。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>方法</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>send(QCommand, TaskCallback)</code></td><td>发命令。被接收就恰好回调一次；队列满回调 <code>BUSY</code></td></tr>
+        <tr><td><code>connect(TaskCallback)</code></td><td>连接并保持。已连接时立即回调成功</td></tr>
+        <tr><td><code>disconnect()</code></td><td>真正断开，任务保留</td></tr>
+        <tr><td><code>setConnectParams(Map)</code></td><td>设置连接参数，对该任务之后的所有连接生效</td></tr>
+        <tr><td><code>observe(Object, TaskObserver)</code></td><td>观察本任务，回调不可变快照</td></tr>
+        <tr><td><code>cancel()</code></td><td>中止当前操作，回到操作开始前的链路状态，任务保留</td></tr>
+        <tr><td><code>delete()</code></td><td>取消 + 断开 + 从任务池移除</td></tr>
+        <tr><td><code>id()</code></td><td>任务 id。清理时用它判断是不是自己那个任务</td></tr>
+        <tr><td><code>deviceMac()</code> / <code>currentMac()</code></td><td>任务绑定的 MAC / 当前实际连接的地址</td></tr>
+        <tr><td><code>getDevice()</code></td><td>扫描解析出的设备，未找到时为 <code>null</code></td></tr>
+        <tr><td><code>getState()</code></td><td>当前状态，见枚举</td></tr>
+        <tr><td><code>getOutcome()</code></td><td>最近一次命令的终态分类</td></tr>
+        <tr><td><code>getResult()</code></td><td>设备回执，可能为 <code>null</code></td></tr>
+        <tr><td><code>getError()</code></td><td>最近一次失败原因</td></tr>
+        <tr><td><code>getProgress()</code> / <code>getSentBytes()</code> / <code>getTotalBytes()</code></td><td>发送进度与字节数</td></tr>
+        <tr><td><code>pendingIntentCount()</code></td><td>待办队列里还有几条</td></tr>
+        <tr><td><code>isDeleted()</code></td><td>是否已被删除</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note warn"><b>反复进出页面时用 <code>createTask</code>。</b>旧页面的销毁可能晚于新页面启动，用同一个任务会互相干扰。清理时带 taskId 只删自己那个。</div>
+</section>
+
+<section id="cmd">
+  <div class="hd"><span class="no">03</span><h2>QCommand 命令</h2></div>
+  <p class="lead">用 Builder 构造。<code>keepConnected()</code> 与 <code>disconnectAfter()</code> 互斥。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>方法</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>connect()</code></td><td>只连接，不发送</td></tr>
+        <tr><td><code>send(String json)</code></td><td>发文本 JSON</td></tr>
+        <tr><td><code>send(String json, byte[] data)</code></td><td>JSON + 单块字节</td></tr>
+        <tr><td><code>send(String json, Map attachments)</code></td><td>JSON + 多附件，大块数据走这里</td></tr>
+        <tr><td><code>keepConnected()</code></td><td>发完保持连接</td></tr>
+        <tr><td><code>disconnectAfter()</code></td><td>发完明确断开，优先于任务的保持期望</td></tr>
+        <tr><td><code>noAck()</code></td><td>标记无需应答。目前只是标记，未传给底层</td></tr>
+        <tr><td><code>reconnect(ReconnectPolicy)</code></td><td>意外断开后的重连策略，默认关闭</td></tr>
+        <tr><td><code>build()</code></td><td>两个互斥项同时出现时抛 <code>IllegalStateException</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><b>发完断不断的判断：</b>命令没有声明 <code>disconnectAfter</code>，且任务上有保持期望或命令声明了 <code>keepConnected</code> 时，保持连接。</div>
+</section>
+
+<section id="result">
+  <div class="hd"><span class="no">04</span><h2>TaskResult 命令结果</h2></div>
+  <p class="lead">每条被接收的命令回调一次。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>方法</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>isSuccess()</code></td><td><b>判断成功的唯一依据</b></td></tr>
+        <tr><td><code>payload()</code></td><td>设备回执，成功也可能为 <code>null</code></td></tr>
+        <tr><td><code>error()</code></td><td>失败原因</td></tr>
+        <tr><td><code>stage()</code></td><td>失败发生在哪一步，见 TaskStage</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="enum">
+  <div class="hd"><span class="no">05</span><h2>枚举</h2></div>
+  <div class="tw">
+    <table>
+      <thead><tr><th style="width:170px">类型</th><th>取值</th></tr></thead>
+      <tbody>
+        <tr><td><code>TaskState</code></td><td><code>UNKNOWN</code> <code>READY</code> <code>SEARCHING</code> <code>QUEUED</code> <code>CONNECTING</code> <code>CONNECTED</code> <code>SENDING</code></td></tr>
+        <tr><td><code>TaskOutcome</code></td><td><code>NONE</code> <code>SUCCEEDED</code> <code>CONNECT_FAILED</code> <code>OPERATION_FAILED</code> <code>CANCELLED</code></td></tr>
+        <tr><td><code>TaskStage</code></td><td><code>SEARCH</code> <code>CONNECT</code> <code>SEND</code> <code>CANCEL</code> <code>DELETE</code> <code>BUSY</code> <code>CLOSED</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">没有 <code>FAILED</code> 状态。失败后任务回到 <code>READY</code> 或 <code>UNKNOWN</code>，失败原因看 <code>error</code> 与 <code>stage</code>。</div>
+</section>
+
+<section id="scan">
+  <div class="hd"><span class="no">06</span><h2>扫描与快照</h2></div>
+  <p class="lead">ScanOptions 只过滤 UI 回调，任务池仍接收完整广播。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th style="width:230px">类型</th><th>成员</th></tr></thead>
+      <tbody>
+        <tr><td><code>ScanOptions.Builder</code></td><td><code>setTimeoutMs</code> <code>setMinRssi</code> <code>setNamePrefix</code> <code>addProtocol</code> <code>addStableId</code></td></tr>
+        <tr><td><code>ScanListener</code></td><td><code>onDevices(List&lt;QDevice&gt;)</code> <code>onScanFailed(int, String)</code> <code>onScanStopped(List)</code></td></tr>
+        <tr><td><code>TaskSnapshot</code></td><td><code>id</code> <code>deviceMac</code> <code>currentMac</code> <code>state</code> <code>outcome</code> <code>progress</code> <code>sentBytes</code> <code>totalBytes</code> <code>result</code> <code>error</code> <code>pendingCount</code></td></tr>
+        <tr><td><code>Subscription</code></td><td><code>cancel()</code> <code>isActive()</code></td></tr>
+        <tr><td><code>QDevice</code></td><td><code>getMac</code> <code>getName</code> <code>getRssi</code> <code>getStableId</code> <code>getProtocolType</code> <code>getMetadata</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note warn"><b>去重用 stableId，不要用 MAC。</b>地址会轮换的设备，MAC 会变，stableId 不会。</div>
+</section>
+
+</div>
+
+<div class="foot" id="foot">青竹 BLE SDK · 文档 · 内容对照 qingzhu-core 源码</div>
 
 </div></main>
 
+<script>
+(function(){
+  var side = document.querySelector('.side');
+  var toc = document.getElementById('toc');
+  var foot = document.getElementById('foot');
+  var views = Array.prototype.slice.call(document.querySelectorAll('.view'));
+  var viewLinks = Array.prototype.slice.call(document.querySelectorAll('#viewnav a'));
+  var titles = { home:'文档', arch:'架构全景', api:'API 速查' };
+  var foots = {
+    home:'青竹 BLE SDK · 文档 · 内容对照 qingzhu-core 源码',
+    arch:'青竹 BLE SDK · 架构全景 · 对照 qingzhu-core 源码',
+    api:'青竹 BLE SDK · API 速查 · 签名对照 qingzhu-core 源码'
+  };
+
+  var current = null;
+  var tocLinks = [];
+  var active = -1;
+  var locked = false;
+  var ticking = false;
+
+  function pad(n){ return n < 10 ? '0' + n : '' + n; }
+
+  function buildToc(view){
+    toc.innerHTML = '';
+    tocLinks = Array.prototype.slice.call(view.querySelectorAll('section[id]')).map(function(s, i){
+      var h = s.querySelector('.hd h2');
+      var a = document.createElement('a');
+      a.href = '#' + s.id;
+      var n = document.createElement('i');
+      n.textContent = pad(i + 1);
+      a.appendChild(n);
+      a.appendChild(document.createTextNode(h ? h.textContent : s.id));
+      a.addEventListener('click', function(){
+        locked = true;
+        paint(i);
+        var done = false;
+        function unlock(){
+          if (done) return;
+          done = true;
+          locked = false;
+          paint(indexAtLine());
+        }
+        if ('onscrollend' in window) window.addEventListener('scrollend', unlock, { once: true });
+        setTimeout(unlock, 1200);
+      });
+      toc.appendChild(a);
+      return a;
+    });
+    active = -1;
+  }
+
+  // 判定线取视口上 1/3，避免平滑滚动途中高亮乱跳
+  function indexAtLine(){
+    var line = window.innerHeight * 0.33;
+    var secs = current ? current.querySelectorAll('section[id]') : [];
+    var idx = 0;
+    for (var i = 0; i < secs.length; i++) {
+      if (secs[i].getBoundingClientRect().top <= line) idx = i;
+    }
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+      idx = Math.max(0, secs.length - 1);
+    }
+    return idx;
+  }
+
+  function paint(i){
+    if (i === active) return;
+    active = i;
+    for (var j = 0; j < tocLinks.length; j++) tocLinks[j].classList.toggle('on', j === i);
+    var a = tocLinks[i];
+    if (side && a) {
+      var t = a.offsetTop, b = t + a.offsetHeight;
+      if (t < side.scrollTop + 8 || b > side.scrollTop + side.clientHeight - 8) {
+        side.scrollTop = t - side.clientHeight / 2 + a.offsetHeight / 2;
+      }
+    }
+  }
+
+  function sync(){
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function(){
+      ticking = false;
+      if (!locked && current) paint(indexAtLine());
+    });
+  }
+
+  function showView(name, hash){
+    if (!titles[name]) name = 'home';
+    current = document.getElementById('view-' + name);
+    views.forEach(function(v){ v.hidden = v !== current; });
+    viewLinks.forEach(function(a){ a.classList.toggle('on', a.getAttribute('data-view') === name); });
+    foot.textContent = foots[name];
+    document.title = '青竹 BLE SDK · ' + titles[name];
+    buildToc(current);
+    var url = location.pathname + (name === 'home' ? '' : '?view=' + name) + (hash || '');
+    try { history.replaceState(null, '', url); } catch (e) {}
+
+    locked = true;
+    var target = hash ? document.getElementById(hash.slice(1)) : null;
+    if (target && current.contains(target)) {
+      requestAnimationFrame(function(){ target.scrollIntoView(); });
+    } else {
+      window.scrollTo(0, 0);
+    }
+    setTimeout(function(){ locked = false; paint(indexAtLine()); }, target ? 900 : 60);
+  }
+
+  document.addEventListener('click', function(e){
+    var el = e.target;
+    while (el && el !== document && !(el.getAttribute && el.getAttribute('data-view'))) el = el.parentNode;
+    if (!el || el === document) return;
+    var href = el.getAttribute('href') || '';
+    var at = href.indexOf('#');
+    e.preventDefault();
+    showView(el.getAttribute('data-view'), at >= 0 ? href.slice(at) : '');
+  });
+
+  var m = location.search.match(/[?&]view=(home|arch|api)/);
+  var name = m ? m[1] : '';
+  var hash = location.hash;
+  if (!name) {
+    if (/^#s(10|[1-9])$/.test(hash)) name = 'arch';
+    else if (/^#(sdk|task|cmd|result|enum|scan)$/.test(hash)) name = 'api';
+    else name = 'home';
+  }
+  showView(name, hash);
+  window.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', sync);
+})();
+</script>
 </body>
 </html>

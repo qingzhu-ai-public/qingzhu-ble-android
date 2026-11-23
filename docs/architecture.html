@@ -452,15 +452,77 @@ pre .cm{color:#6B7F9C}
 
 <script>
 (function(){
-  var as=Array.prototype.slice.call(document.querySelectorAll('#toc a'));
-  var ts=as.map(function(a){return document.querySelector(a.getAttribute('href'));});
-  function sync(){
-    var y=window.scrollY+140,c=0;
-    ts.forEach(function(t,i){ if(t&&t.offsetTop<=y) c=i; });
-    as.forEach(function(a,i){ a.classList.toggle('on',i===c); });
+  var side = document.querySelector('.side');
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var items = links.map(function(a){
+    var el = document.querySelector(a.getAttribute('href'));
+    return el ? { el: el } : null;
+  });
+
+  var active = -1;
+  var locked = false;
+  var ticking = false;
+
+  // 用视口上 1/3 作判定线，和锚点的 scroll-padding 解耦
+  function indexAtLine(){
+    var line = window.innerHeight * 0.33;
+    var idx = 0;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i] && items[i].el.getBoundingClientRect().top <= line) idx = i;
+    }
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+      idx = items.length - 1;
+    }
+    return idx;
   }
-  window.addEventListener('scroll',sync,{passive:true});
-  window.addEventListener('resize',sync);sync();
+
+  function paint(i){
+    if (i === active) return;
+    active = i;
+    for (var j = 0; j < links.length; j++) {
+      links[j].classList.toggle('on', j === i);
+    }
+    // 侧栏自身可能滚动：只调侧栏 scrollTop，不动页面
+    var a = links[i];
+    if (side && a) {
+      var t = a.offsetTop, b = t + a.offsetHeight;
+      if (t < side.scrollTop + 8 || b > side.scrollTop + side.clientHeight - 8) {
+        side.scrollTop = t - side.clientHeight / 2 + a.offsetHeight / 2;
+      }
+    }
+  }
+
+  function sync(){
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function(){
+      ticking = false;
+      if (!locked) paint(indexAtLine());
+    });
+  }
+
+  links.forEach(function(a, i){
+    a.addEventListener('click', function(){
+      // 点击后锁定目标高亮，避免平滑滚动途中一路闪过去
+      locked = true;
+      paint(i);
+      var done = false;
+      function unlock(){
+        if (done) return;
+        done = true;
+        locked = false;
+        paint(indexAtLine());
+      }
+      if ('onscrollend' in window) {
+        window.addEventListener('scrollend', unlock, { once: true });
+      }
+      setTimeout(unlock, 1200);
+    });
+  });
+
+  window.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', sync);
+  paint(indexAtLine());
 })();
 </script>
 </body>
