@@ -1,6 +1,6 @@
 ![Qingzhu BLE Android SDK](docs/images/hero-pain.png)
 
-### [下载试玩（1 个主端 + 2 个从端）](#下载试玩) · 具体实现思路看文章《[AI 时代，如何做一个生产级 Android BLE SDK ？](https://qingzhu-ai-public.github.io/qingzhu-blue/#android/experience/from-runnable-to-production)》 · [在线文档](https://qingzhu-ai-public.github.io/qingzhu-blue/)
+### [下载试玩（1 个主端 + 2 个从端）](#下载试玩) · [在线文档](https://qingzhu-ai-public.github.io/qingzhu-ble-android/)（[架构全景](https://qingzhu-ai-public.github.io/qingzhu-ble-android/architecture.html) · [API 速查](https://qingzhu-ai-public.github.io/qingzhu-ble-android/api.html)） · 具体实现思路看文章《[AI 时代，如何做一个生产级 Android BLE SDK ？](https://qingzhu-ai-public.github.io/qingzhu-blue/#android/experience/from-runnable-to-production)》
 
 > Fullstack 教学基线源码：[reference/fullstack](reference/fullstack)（独立参考工程，不参与主 SDK 构建）。
 

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>青竹 BLE SDK · 文档</title>
+<style>
+:root{
+  --bg:#F5F7FB; --ink:#0F131B; --soft:#6C7889; --line:#E1E6F0; --line2:#EFF2F8;
+  --blue:#2F6BE0; --blue-bg:#EDF3FE; --blue-line:#CFDEFA;
+  --dark:#0F1A2E; --green:#0E8A5F; --amber:#B26B00; --red:#C0392B;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:32px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 var(--sans);-webkit-font-smoothing:antialiased}
+
+.side{position:fixed;inset:0 auto 0 0;width:236px;overflow-y:auto;background:#fff;border-right:1px solid var(--line);padding:28px 14px;z-index:20}
+.side b{display:block;font-size:14px;padding:0 10px}
+.side em{display:block;font:400 10.5px/1.8 var(--mono);color:#AEB8C8;letter-spacing:.15em;font-style:normal;padding:0 10px;margin-top:3px;text-transform:uppercase}
+.side nav{margin-top:22px;display:flex;flex-direction:column;gap:1px}
+.side a{display:flex;gap:9px;align-items:baseline;padding:7px 10px;border-radius:6px;color:#4A5568;text-decoration:none;font-size:13px;transition:.15s}
+.side a i{font:600 10px var(--mono);color:#C3CCDB;font-style:normal}
+.side a:hover{background:#F5F8FD;color:var(--blue)}
+.side a.on{background:var(--blue-bg);color:var(--blue);font-weight:600}
+.side a.on i{color:var(--blue)}
+.side .sep{margin:16px 10px 6px;font:600 10px var(--mono);letter-spacing:.14em;color:#C3CCDB;text-transform:uppercase}
+
+.main{margin-left:236px;padding:0 48px 110px}
+.wrap{max-width:920px;margin:0 auto}
+
+.hero{padding:88px 0 26px}
+.hero h1{font-size:42px;line-height:1.18;margin:0;letter-spacing:-.03em;font-weight:700}
+.hero h1 span{color:#AEB8C8;font-weight:400}
+.hero p{margin:20px 0 0;font-size:16.5px;color:#4A5568;max-width:700px;line-height:1.8}
+.tags{display:flex;gap:8px;margin-top:24px;flex-wrap:wrap}
+.tag{font:500 12px var(--mono);color:#5A6779;background:#fff;border:1px solid var(--line);padding:5px 11px;border-radius:5px}
+
+section{padding:48px 0;border-top:1px solid var(--line)}
+.hd{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
+.hd .no{font:600 12px var(--mono);color:#C3CCDB;letter-spacing:.1em}
+.hd h2{font-size:22px;margin:0;letter-spacing:-.01em;font-weight:650}
+.lead{margin:0 0 20px;font-size:14px;color:var(--soft);max-width:760px}
+
+/* 入口卡片 */
+.entries{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.en{display:block;background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px 20px;text-decoration:none;color:inherit;transition:.18s}
+.en:hover{border-color:var(--blue-line);box-shadow:0 4px 18px rgba(47,107,224,.08);transform:translateY(-2px)}
+.en .k{font:600 10.5px var(--mono);letter-spacing:.12em;color:#C3CCDB;text-transform:uppercase}
+.en h3{margin:8px 0 6px;font-size:16px;font-weight:650}
+.en p{margin:0;font-size:12.5px;color:#6C7889;line-height:1.6}
+
+.plate{background:#fff;border:1px solid var(--line);border-radius:14px;padding:30px 26px}
+.cap{margin:14px 0 0;font-size:12.5px;color:var(--soft);text-align:center}
+
+/* 概念 */
+.twoq{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.qbox{border:1px solid var(--line);border-radius:10px;padding:16px;background:#FBFCFE}
+.qbox h4{margin:0 0 4px;font:600 13px var(--mono);color:#1B4BA8}
+.qbox p{margin:0 0 12px;font-size:12px;color:var(--soft);line-height:1.5}
+.slot{border:1px solid var(--line);background:#fff;border-radius:7px;padding:8px 11px;font:500 11.5px var(--mono);color:#4A5568;display:flex;justify-content:space-between;gap:8px}
+.slot b{color:var(--ink);font-weight:600}
+.slot.act{border-color:var(--blue-line);background:var(--blue-bg)}
+.slot + .slot{margin-top:6px}
+.slot em{font-style:normal;color:#A9B4C4;font-size:10.5px}
+
+code{font-family:var(--mono);font-size:.9em;background:#EDF1F8;color:#1B3A6B;padding:1.5px 5px;border-radius:4px;white-space:nowrap}
+pre{background:#0D1524;color:#D5DFEF;padding:18px 20px;border-radius:10px;overflow-x:auto;margin:16px 0 0;font:13px/1.85 var(--mono);border:1px solid #1B2941}
+pre code{background:none;color:inherit;padding:0;font-size:inherit;white-space:pre}
+pre .cm{color:#6B7F9C}
+
+/* 表格 */
+.tw{overflow-x:auto;margin:16px 0 0;border:1px solid var(--line);border-radius:10px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-weight:600;color:var(--ink);background:#FAFBFE;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;font-size:12.5px}
+td{padding:10px 14px;border-bottom:1px solid var(--line2);color:#4A5568;vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:0}
+
+.note{border-left:3px solid var(--blue);background:#F4F8FF;padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0 0;font-size:13.5px;color:#4A5568;line-height:1.7}
+.note.warn{border-left-color:var(--amber);background:#FFF9EF}
+.note.danger{border-left-color:var(--red);background:#FFF5F4}
+.note b{color:var(--ink)}
+
+.foot{padding:36px 0 0;color:#AEB8C8;font-size:12px;text-align:center;border-top:1px solid var(--line);margin-top:8px}
+
+@media (max-width:1080px){
+  .side{display:none}
+  .main{margin-left:0;padding:0 20px 70px}
+  .hero{padding:56px 0 20px}.hero h1{font-size:31px}
+  .entries{grid-template-columns:1fr}
+  .twoq{grid-template-columns:1fr}
+  .plate{padding:20px 16px}
+}
+</style>
+</head>
+<body>
+
+<aside class="side">
+  <b>青竹 BLE SDK</b><em>Docs</em>
+  <nav>
+    <a href="index.html" class="on"><i>01</i>首页</a>
+    <a href="architecture.html"><i>02</i>架构全景</a>
+    <a href="api.html"><i>03</i>API 速查</a>
+    <a href="#start"><i>04</i>快速接入</a>
+    <a href="#limits"><i>05</i>已知边界</a>
+    <div class="sep">External</div>
+    <a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android" target="_blank" rel="noopener"><i>↗</i>源码仓库</a>
+    <a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android#readme" target="_blank" rel="noopener"><i>↗</i>完整 README</a>
+  </nav>
+</aside>
+
+<main class="main"><div class="wrap">
+
+<header class="hero">
+  <h1>青竹 BLE SDK<br><span>文档</span></h1>
+  <p>任务式 Android BLE 内核。一台设备一个任务，业务只说要对哪台设备做什么，寻人、排队、建连、重发、断开由内核完成。</p>
+  <div class="tags">
+    <span class="tag">任务驱动</span>
+    <span class="tag">两级队列</span>
+    <span class="tag">协议插件化</span>
+    <span class="tag">JSON to JSON</span>
+  </div>
+</header>
+
+<section>
+  <div class="hd"><span class="no">01</span><h2>从这里开始</h2></div>
+  <p class="lead">先看结构，再看接口，最后照示例写。</p>
+  <div class="entries">
+    <a class="en" href="architecture.html">
+      <span class="k">Architecture</span>
+      <h3>架构全景</h3>
+      <p>三级结构、两个队列、状态机、各场景内部流程。</p>
+    </a>
+    <a class="en" href="api.html">
+      <span class="k">Reference</span>
+      <h3>API 速查</h3>
+      <p>门面、任务、命令、结果类型的全部公开方法。</p>
+    </a>
+    <a class="en" href="#start">
+      <span class="k">Quickstart</span>
+      <h3>快速接入</h3>
+      <p>引依赖、初始化、扫描、发第一条命令。</p>
+    </a>
+  </div>
+</section>
+
+<section>
+  <div class="hd"><span class="no">02</span><h2>两个队列，别混在一起</h2></div>
+  <p class="lead">任务池装设备，指令队列装命令。跨任务并行，任务内串行。</p>
+  <div class="plate">
+    <div class="twoq">
+      <div class="qbox">
+        <h4>任务池 QTaskPool</h4>
+        <p>装设备。无序，各自推进，互不等待。</p>
+        <div class="slot"><b>设备 A</b><em>SENDING</em></div>
+        <div class="slot"><b>设备 B</b><em>QUEUED</em></div>
+        <div class="slot"><b>设备 C</b><em>READY</em></div>
+      </div>
+      <div class="qbox">
+        <h4>指令队列 PendingIntentQueue</h4>
+        <p>装命令。先进先出，同一设备严格串行。</p>
+        <div class="slot act"><b>命令 1</b><em>执行中</em></div>
+        <div class="slot"><b>命令 2</b><em>等待</em></div>
+        <div class="slot"><b>命令 3</b><em>等待</em></div>
+      </div>
+    </div>
+    <div class="note"><b>一个任务里可以有上万条命令</b>，但一台设备同一时刻只发一条。真正的并发发生在任务之间，受连接容量限制。</div>
+  </div>
+  <p class="cap">详见 架构全景 · 第 02 节</p>
+</section>
+
+<section id="start">
+  <div class="hd"><span class="no">03</span><h2>发一条命令</h2></div>
+  <p class="lead">三步：拿任务、发命令、收结果。</p>
+  <div class="plate">
+    <pre><code><span class="cm">// 1. 拿任务：一台设备一个任务</span>
+QTask task = QingzhuSdk.getTask(mac);
+<span class="cm">// 没有才创建；反复进出页面请直接用 createTask，见架构图 07</span>
+if (task == null) task = QingzhuSdk.createTask(mac);
+
+<span class="cm">// 2. 发命令：每条命令恰好回调一次</span>
+task.send(
+    QCommand.builder().send("{\"action\":\"echo\"}").build(),
+    result -&gt; {
+        if (result.isSuccess()) {
+            String payload = result.payload();
+        } else {
+            TaskStage stage = result.stage();
+            String error = result.error();
+        }
+    }
+);</code></pre>
+    <div class="note"><b>判断成功只看 <code>isSuccess()</code>。</b>payload 是设备回显，成功也可能为空，不要用 payload 判成败。</div>
+  </div>
+  <p class="cap">完整接入步骤见 README 的「接入文档」一节</p>
+</section>
+
+<section>
+  <div class="hd"><span class="no">04</span><h2>关键数字</h2></div>
+  <p class="lead">来自当前源码的默认值。</p>
+  <div class="plate">
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:220px">参数</th><th style="width:120px">默认值</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>并发连接</td><td><code>7</code></td><td>同时保有几条连接，可调</td></tr>
+          <tr><td>传输窗口</td><td><code>1</code></td><td>全局串行发送，可调</td></tr>
+          <tr><td>每设备指令队列</td><td><code>10000</code></td><td>满了返回 BUSY</td></tr>
+          <tr><td>连接等待队列</td><td>无界</td><td>请求不拒绝，按序补位</td></tr>
+          <tr><td>失败重试</td><td><code>3</code></td><td>间隔 1.5 秒</td></tr>
+          <tr><td>寻人超时</td><td><code>30 秒</code></td><td>未扫到算一次失败</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="limits">
+  <div class="hd"><span class="no">05</span><h2>已知边界</h2></div>
+  <div class="plate">
+    <div class="note danger"><b><code>send</code> 不是线程安全的。</b>MQTT 等子线程并发调用要自己串行化，否则可能出现两条命令同时发。</div>
+    <div class="note warn"><b>任务不会自动回收。</b>长期运行的服务需要定时 <code>deleteTask</code>，否则任务池只增不减。</div>
+    <div class="note warn"><b>没有设备主动上报通路。</b><code>QTask</code> 没有 listen，设备主动推送的数据暂时收不到。</div>
+    <div class="note"><b>只有 Android 实现。</b><code>BleAdapter</code> 是平台抽象，但只有一份实现。</div>
+  </div>
+</section>
+
+<div class="foot">青竹 BLE SDK · 文档 · 内容对照 qingzhu-core 源码</div>
+
+</div></main>
+
+</body>
+</html>

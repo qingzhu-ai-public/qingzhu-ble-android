@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>青竹 BLE SDK · API 速查</title>
+<style>
+:root{
+  --bg:#F5F7FB; --ink:#0F131B; --soft:#6C7889; --line:#E1E6F0; --line2:#EFF2F8;
+  --blue:#2F6BE0; --blue-bg:#EDF3FE; --blue-line:#CFDEFA;
+  --dark:#0F1A2E; --green:#0E8A5F; --amber:#B26B00; --red:#C0392B;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:32px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 var(--sans);-webkit-font-smoothing:antialiased}
+
+.side{position:fixed;inset:0 auto 0 0;width:236px;overflow-y:auto;background:#fff;border-right:1px solid var(--line);padding:28px 14px;z-index:20}
+.side b{display:block;font-size:14px;padding:0 10px}
+.side em{display:block;font:400 10.5px/1.8 var(--mono);color:#AEB8C8;letter-spacing:.15em;font-style:normal;padding:0 10px;margin-top:3px;text-transform:uppercase}
+.side nav{margin-top:22px;display:flex;flex-direction:column;gap:1px}
+.side a{display:flex;gap:9px;align-items:baseline;padding:7px 10px;border-radius:6px;color:#4A5568;text-decoration:none;font-size:13px;transition:.15s}
+.side a i{font:600 10px var(--mono);color:#C3CCDB;font-style:normal}
+.side a:hover{background:#F5F8FD;color:var(--blue)}
+.side a.on{background:var(--blue-bg);color:var(--blue);font-weight:600}
+.side a.on i{color:var(--blue)}
+.side .sep{margin:16px 10px 6px;font:600 10px var(--mono);letter-spacing:.14em;color:#C3CCDB;text-transform:uppercase}
+
+.main{margin-left:236px;padding:0 48px 110px}
+.wrap{max-width:960px;margin:0 auto}
+
+.hero{padding:80px 0 20px}
+.hero h1{font-size:36px;line-height:1.2;margin:0;letter-spacing:-.028em;font-weight:700}
+.hero p{margin:16px 0 0;font-size:15px;color:#4A5568;max-width:700px}
+
+section{padding:44px 0;border-top:1px solid var(--line)}
+.hd{display:flex;align-items:baseline;gap:14px;margin-bottom:6px}
+.hd .no{font:600 12px var(--mono);color:#C3CCDB;letter-spacing:.1em}
+.hd h2{font-size:21px;margin:0;letter-spacing:-.01em;font-weight:650}
+.lead{margin:0 0 16px;font-size:13.5px;color:var(--soft)}
+
+code{font-family:var(--mono);font-size:.9em;background:#EDF1F8;color:#1B3A6B;padding:1.5px 5px;border-radius:4px;white-space:nowrap}
+.tw{overflow-x:auto;margin:12px 0 0;border:1px solid var(--line);border-radius:10px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--ink);background:#FAFBFE;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;font-size:12px}
+td{padding:10px 14px;border-bottom:1px solid var(--line2);color:#4A5568;vertical-align:top;line-height:1.6}
+td:first-child{white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td code{font-size:.92em}
+
+.note{border-left:3px solid var(--blue);background:#F4F8FF;padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0 0;font-size:13px;color:#4A5568;line-height:1.7}
+.note.warn{border-left-color:var(--amber);background:#FFF9EF}
+.note b{color:var(--ink)}
+
+.foot{padding:36px 0 0;color:#AEB8C8;font-size:12px;text-align:center;border-top:1px solid var(--line);margin-top:8px}
+
+@media (max-width:1080px){
+  .side{display:none}
+  .main{margin-left:0;padding:0 20px 70px}
+  .hero{padding:52px 0 16px}.hero h1{font-size:29px}
+}
+</style>
+</head>
+<body>
+
+<aside class="side">
+  <b>青竹 BLE SDK</b><em>Docs</em>
+  <nav>
+    <a href="index.html"><i>01</i>首页</a>
+    <a href="architecture.html"><i>02</i>架构全景</a>
+    <a href="api.html" class="on"><i>03</i>API 速查</a>
+    <div class="sep">Reference</div>
+    <a href="#sdk"><i>·</i>QingzhuSdk</a>
+    <a href="#task"><i>·</i>QTask</a>
+    <a href="#cmd"><i>·</i>QCommand</a>
+    <a href="#result"><i>·</i>TaskResult</a>
+    <a href="#enum"><i>·</i>枚举</a>
+    <a href="#scan"><i>·</i>扫描</a>
+    <div class="sep">External</div>
+    <a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android" target="_blank" rel="noopener"><i>↗</i>源码仓库</a>
+  </nav>
+</aside>
+
+<main class="main"><div class="wrap">
+
+<header class="hero">
+  <h1>API 速查</h1>
+  <p>全部公开方法，签名对照源码。示例用 Java，Kotlin 直接调用即可。</p>
+</header>
+
+<section id="sdk">
+  <div class="hd"><span class="no">01</span><h2>QingzhuSdk 门面</h2></div>
+  <p class="lead">静态方法，进程内单例。重复初始化幂等。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>方法</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td><code>init(Context)</code></td><td>初始化内核与适配器，注册 Eddystone 与 Generic 两个开源协议</td></tr>
+        <tr><td><code>registerProtocol(ProtocolPlugin)</code></td><td>注册协议插件，重复注册同一 id 幂等；注册后立即触发 <code>install()</code></td></tr>
+        <tr><td><code>getProtocols()</code></td><td>当前已装配的协议 id 列表</td></tr>
+        <tr><td><code>startScan(ScanListener)</code></td><td>开始扫描，默认参数</td></tr>
+        <tr><td><code>startScan(ScanOptions, ScanListener)</code></td><td>带过滤条件的扫描</td></tr>
+        <tr><td><code>stopScan()</code> / <code>restartScan()</code></td><td>停止 / 重启扫描</td></tr>
+        <tr><td><code>setScanStateListener(ScanStateListener)</code></td><td>监听扫描开关状态</td></tr>
+        <tr><td><code>createTask(String mac)</code></td><td>新建任务。<b>会先删除该设备已有任务</b></td></tr>
+        <tr><td><code>createTask(QDevice)</code></td><td>用扫描到的设备建任务，同样先删后建</td></tr>
+        <tr><td><code>getTask(String mac)</code></td><td>只查询，没有返回 <code>null</code></td></tr>
+        <tr><td><code>deleteTask(String mac)</code></td><td>取消、断开、从任务池移除</td></tr>
+        <tr><td><code>observeAll(Object owner, TaskListListener)</code></td><td>观察全部任务，注册后立即推一次全量快照</td></tr>
+        <tr><td><code>snapshots()</code></td><td>当前所有任务的不可变快照列表</td></tr>
+        <tr><td><code>setMaxConnections(int)</code></td><td>并发连接数。0 = 用体检建议值，1-N = 手动固定</td></tr>
+        <tr><td><code>setMaxTransfers(int)</code></td><td>传输窗口。1 = 串行，N = 最多 N 台同时发</td></tr>
+        <tr><td><code>setMaxRetries(int)</code></td><td>失败重试次数，默认 3</td></tr>
+        <tr><td><code>setMaxPendingIntents(int)</code></td><td>每设备指令队列上限，默认 10000；0 = 忙碌时直接失败</td></tr>
+        <tr><td><code>setConnectCallbackTimeoutMs(long)</code></td><td>系统连接回调兜底，默认 20 秒</td></tr>
+        <tr><td><code>getConcurrency()</code></td><td>当前生效的并发容量</td></tr>
+        <tr><td><code>settings()</code></td><td>全局设置中心，含协议声明的可配置项</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="task">
+  <div class="hd"><span class="no">02</span><h2>QTask 任务</h2></div>
+  <p class="lead">一台设备一个任务。所有读写方法都可随时调用。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>方法</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>send(QCommand, TaskCallback)</code></td><td>发命令。被接收就恰好回调一次；队列满回调 <code>BUSY</code></td></tr>
+        <tr><td><code>connect(TaskCallback)</code></td><td>连接并保持。已连接时立即回调成功</td></tr>
+        <tr><td><code>disconnect()</code></td><td>真正断开，任务保留</td></tr>
+        <tr><td><code>setConnectParams(Map)</code></td><td>设置连接参数，对该任务之后的所有连接生效</td></tr>
+        <tr><td><code>observe(Object, TaskObserver)</code></td><td>观察本任务，回调不可变快照</td></tr>
+        <tr><td><code>cancel()</code></td><td>中止当前操作，回到操作开始前的链路状态，任务保留</td></tr>
+        <tr><td><code>delete()</code></td><td>取消 + 断开 + 从任务池移除</td></tr>
+        <tr><td><code>id()</code></td><td>任务 id。清理时用它判断是不是自己那个任务</td></tr>
+        <tr><td><code>deviceMac()</code> / <code>currentMac()</code></td><td>任务绑定的 MAC / 当前实际连接的地址</td></tr>
+        <tr><td><code>getDevice()</code></td><td>扫描解析出的设备，未找到时为 <code>null</code></td></tr>
+        <tr><td><code>getState()</code></td><td>当前状态，见枚举</td></tr>
+        <tr><td><code>getOutcome()</code></td><td>最近一次命令的终态分类</td></tr>
+        <tr><td><code>getResult()</code></td><td>设备回执，可能为 <code>null</code></td></tr>
+        <tr><td><code>getError()</code></td><td>最近一次失败原因</td></tr>
+        <tr><td><code>getProgress()</code> / <code>getSentBytes()</code> / <code>getTotalBytes()</code></td><td>发送进度与字节数</td></tr>
+        <tr><td><code>pendingIntentCount()</code></td><td>待办队列里还有几条</td></tr>
+        <tr><td><code>isDeleted()</code></td><td>是否已被删除</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note warn"><b>反复进出页面时用 <code>createTask</code>。</b>旧页面的销毁可能晚于新页面启动，用同一个任务会互相干扰。清理时带 taskId 只删自己那个。</div>
+</section>
+
+<section id="cmd">
+  <div class="hd"><span class="no">03</span><h2>QCommand 命令</h2></div>
+  <p class="lead">用 Builder 构造。<code>keepConnected()</code> 与 <code>disconnectAfter()</code> 互斥。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>方法</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>connect()</code></td><td>只连接，不发送</td></tr>
+        <tr><td><code>send(String json)</code></td><td>发文本 JSON</td></tr>
+        <tr><td><code>send(String json, byte[] data)</code></td><td>JSON + 单块字节</td></tr>
+        <tr><td><code>send(String json, Map attachments)</code></td><td>JSON + 多附件，大块数据走这里</td></tr>
+        <tr><td><code>keepConnected()</code></td><td>发完保持连接</td></tr>
+        <tr><td><code>disconnectAfter()</code></td><td>发完明确断开，优先于任务的保持期望</td></tr>
+        <tr><td><code>noAck()</code></td><td>标记无需应答。目前只是标记，未传给底层</td></tr>
+        <tr><td><code>reconnect(ReconnectPolicy)</code></td><td>意外断开后的重连策略，默认关闭</td></tr>
+        <tr><td><code>build()</code></td><td>两个互斥项同时出现时抛 <code>IllegalStateException</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><b>发完断不断的判断：</b>命令没有声明 <code>disconnectAfter</code>，且任务上有保持期望或命令声明了 <code>keepConnected</code> 时，保持连接。</div>
+</section>
+
+<section id="result">
+  <div class="hd"><span class="no">04</span><h2>TaskResult 命令结果</h2></div>
+  <p class="lead">每条被接收的命令回调一次。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>方法</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>isSuccess()</code></td><td><b>判断成功的唯一依据</b></td></tr>
+        <tr><td><code>payload()</code></td><td>设备回执，成功也可能为 <code>null</code></td></tr>
+        <tr><td><code>error()</code></td><td>失败原因</td></tr>
+        <tr><td><code>stage()</code></td><td>失败发生在哪一步，见 TaskStage</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="enum">
+  <div class="hd"><span class="no">05</span><h2>枚举</h2></div>
+  <div class="tw">
+    <table>
+      <thead><tr><th style="width:170px">类型</th><th>取值</th></tr></thead>
+      <tbody>
+        <tr><td><code>TaskState</code></td><td><code>UNKNOWN</code> <code>READY</code> <code>SEARCHING</code> <code>QUEUED</code> <code>CONNECTING</code> <code>CONNECTED</code> <code>SENDING</code></td></tr>
+        <tr><td><code>TaskOutcome</code></td><td><code>NONE</code> <code>SUCCEEDED</code> <code>CONNECT_FAILED</code> <code>OPERATION_FAILED</code> <code>CANCELLED</code></td></tr>
+        <tr><td><code>TaskStage</code></td><td><code>SEARCH</code> <code>CONNECT</code> <code>SEND</code> <code>CANCEL</code> <code>DELETE</code> <code>BUSY</code> <code>CLOSED</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">没有 <code>FAILED</code> 状态。失败后任务回到 <code>READY</code> 或 <code>UNKNOWN</code>，失败原因看 <code>error</code> 与 <code>stage</code>。</div>
+</section>
+
+<section id="scan">
+  <div class="hd"><span class="no">06</span><h2>扫描与快照</h2></div>
+  <p class="lead">ScanOptions 只过滤 UI 回调，任务池仍接收完整广播。</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th style="width:230px">类型</th><th>成员</th></tr></thead>
+      <tbody>
+        <tr><td><code>ScanOptions.Builder</code></td><td><code>setTimeoutMs</code> <code>setMinRssi</code> <code>setNamePrefix</code> <code>addProtocol</code> <code>addStableId</code></td></tr>
+        <tr><td><code>ScanListener</code></td><td><code>onDevices(List&lt;QDevice&gt;)</code> <code>onScanFailed(int, String)</code> <code>onScanStopped(List)</code></td></tr>
+        <tr><td><code>TaskSnapshot</code></td><td><code>id</code> <code>deviceMac</code> <code>currentMac</code> <code>state</code> <code>outcome</code> <code>progress</code> <code>sentBytes</code> <code>totalBytes</code> <code>result</code> <code>error</code> <code>pendingCount</code></td></tr>
+        <tr><td><code>Subscription</code></td><td><code>cancel()</code> <code>isActive()</code></td></tr>
+        <tr><td><code>QDevice</code></td><td><code>getMac</code> <code>getName</code> <code>getRssi</code> <code>getStableId</code> <code>getProtocolType</code> <code>getMetadata</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note warn"><b>去重用 stableId，不要用 MAC。</b>地址会轮换的设备，MAC 会变，stableId 不会。</div>
+</section>
+
+<div class="foot">青竹 BLE SDK · API 速查 · 签名对照 qingzhu-core 源码</div>
+
+</div></main>
+
+</body>
+</html>
