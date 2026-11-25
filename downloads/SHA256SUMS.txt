@@ -1,3 +1,4 @@
 cabbf79101fdccebdb7ce95ef55c28d35cd450b08fd39da00cc522221885d2dc  qingzhu-demo-main-v1.0-debug.apk
 d4f84b592cf0a40b6a526fb7a99099169aa3ed484535be1a03b298f2d3982c24  qingzhu-demo-sim-generic-v1.0-debug.apk
 a536b5e4ddd7119e08b7c81814e676520aebb75d6065c155dce464b0aa86bd9c  qingzhu-demo-sim-eddystone-v1.0-debug.apk
+196b667fd2d2799eeac808148bdb0d2d9b4689706f528503c1bfed3614150621  bthome-thermometer-v1.0-debug.apk

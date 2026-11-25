@@ -81,6 +81,7 @@ Qingzhu-BLE 不是再写一个薄封装，而是把这两层问题收进同一�
 - [附录 A：命令模型与 Builder](#附录-a命令模型与-builder真实-api)
 - [构建](#构建)
   - [Fullstack 参考源码](#fullstack-参考源码)
+  - [BTHome 示例工程](#bthome-示例工程)
 - [测试](#测试)
 - [Screenshot](#screenshot)
 - [常见问题](#常见问题)
@@ -94,9 +95,10 @@ Qingzhu-BLE 不是再写一个薄封装，而是把这两层问题收进同一�
 | 主端 | [qingzhu-demo-main-v1.0-debug.apk](downloads/qingzhu-demo-main-v1.0-debug.apk) | 扫描、添加任务、连接、发送、命令排队、调度配置 |
 | 从端 | [qingzhu-demo-sim-generic-v1.0-debug.apk](downloads/qingzhu-demo-sim-generic-v1.0-debug.apk) | Generic 可编程外设，任意广播 + echo GATT |
 | 从端 | [qingzhu-demo-sim-eddystone-v1.0-debug.apk](downloads/qingzhu-demo-sim-eddystone-v1.0-debug.apk) | Eddystone Beacon + 可连接 GATT 外设 |
-| 校验 | [SHA256SUMS.txt](downloads/SHA256SUMS.txt) | 3 个 APK 的 SHA256 |
+| 校验 | [SHA256SUMS.txt](downloads/SHA256SUMS.txt) | 4 个 APK 的 SHA256 |
+| 教学实战 | [bthome-thermometer-v1.0-debug.apk](downloads/bthome-thermometer-v1.0-debug.apk) | BTHome 温湿度计，一个 App 内含主端 + 从端，Android 8.0+，源码见 [samples/bthome-thermometer](samples/bthome-thermometer) |
 
-三个 APK 都是 Debug 签名，Android 7.0+。
+前三个 APK 是 Debug 签名，Android 7.0+。
 
 ```bash
 adb install -r downloads/qingzhu-demo-main-v1.0-debug.apk
@@ -743,6 +745,22 @@ reference/fullstack/
 ```
 
 更多说明见 [reference/fullstack/README.md](reference/fullstack/README.md)。
+
+### BTHome 示例工程
+
+`samples/bthome-thermometer/` 是青竹蓝牙学堂 Android 第十四课的配套 App：不依赖任何 BLE SDK，只用 Android 原生 API 把一个真实协议从规范做到能跑。
+
+- **协议层**：BTHome v2 的解析和编码，22 个单元测试（含官方样例、符号扩展、31 字节预算）。
+- **主端**：按 0xFCD2 过滤扫描、按地址合并、10 秒无广播标离线、`onScanFailed` 退避重试。
+- **从端**：模拟温湿度源 → 编码 → Legacy 广播，读数变化用 `setAdvertisingData` 热更新，设备名放扫描响应。
+- **连接路线**（自定义教学服务，不属于 BTHome 标准）：`connectGatt → discoverServices → 写 CCCD 订阅通知 → 写入指令`，主端写一条，从端读数跟着变。
+
+```bash
+./gradlew -p samples/bthome-thermometer :app:testDebugUnitTest
+./gradlew -p samples/bthome-thermometer :app:assembleDebug
+```
+
+规范：<https://bthome.io/format>。玩法与验收清单见 [samples/bthome-thermometer/README.md](samples/bthome-thermometer/README.md)。
 
 ## 测试
 

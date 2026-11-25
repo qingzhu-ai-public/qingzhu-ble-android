@@ -1,0 +1,53 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'dev.qingzhu.bthome'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'dev.qingzhu.bthome'
+        // BluetoothLeAdvertiser.startAdvertisingSet 从 Android 8.0（API 26）起才有
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    testOptions {
+        unitTests.all {
+            testLogging {
+                events 'passed', 'failed', 'skipped'
+            }
+        }
+    }
+}
+
+dependencies {
+    // 协议层是纯 Kotlin，不依赖任何 Android 类，所以能在 JVM 上直接跑单元测试。
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
+    // 只为界面引入 AppCompat + Fragment + RecyclerView，不涉及任何 BLE SDK。
+    implementation 'androidx.appcompat:appcompat:1.3.1'
+    implementation 'androidx.fragment:fragment-ktx:1.3.6'
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
+
+    testImplementation 'junit:junit:4.13.2'
+}
