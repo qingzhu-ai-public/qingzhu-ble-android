@@ -270,7 +270,7 @@ public final class QSdk {
         taskPool.setMaxRetries(n);
     }
 
-    /** 每台设备最多排队多少条待执行命令；0 = 忙碌时直接失败。默认 10,000。 */
+    /** 每台设备最多排队多少条待执行命令；0 = 忙碌时直接失败。默认 10_000。 */
     public void setMaxPendingIntents(int n) {
         ensureInit();
         taskPool.setMaxPendingIntents(n);
@@ -280,6 +280,14 @@ public final class QSdk {
     public void setConnectCallbackTimeoutMs(long timeoutMs) {
         com.qingzhu.ble.sdk.core.platform.AndroidGattClient
                 .setConnectCallbackTimeoutMs(timeoutMs);
+    }
+
+    /** 单条 SEND 命令应答超时，默认 8,000 ms；0 = 不启用。CONNECT / noAck 命令不启用。 */
+    public void setCommandTimeoutMs(long timeoutMs) {
+        if (timeoutMs < 0) {
+            throw new IllegalArgumentException("命令超时不能为负数（0 = 不启用）");
+        }
+        com.qingzhu.ble.sdk.core.settings.BleSettings.get().commandTimeoutMs(timeoutMs);
     }
 
     /** 当前连接并发容量 */

@@ -14,10 +14,13 @@ import com.qingzhu.ble.sdk.core.api.TaskSnapshot;
 import com.qingzhu.ble.sdk.core.api.TaskStage;
 import com.qingzhu.ble.sdk.core.api.TaskState;
 import com.qingzhu.ble.sdk.core.ble.BleAdapter;
+import com.qingzhu.ble.sdk.core.common.ErrorCode;
 import com.qingzhu.ble.sdk.core.common.QLog;
 import com.qingzhu.ble.sdk.core.connect.ConnectParams;
 import com.qingzhu.ble.sdk.core.device.QDevice;
 import com.qingzhu.ble.sdk.core.pool.ReconnectPolicy;
+import com.qingzhu.ble.sdk.core.settings.BleSettings;
+import com.qingzhu.ble.sdk.core.session.SessionRegistry;
 
 import java.util.List;
 import java.util.Map;
@@ -41,6 +44,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class QTaskPool {
 
     private static final String TAG = "QTaskPool";
+    private static final String KEY_COMMAND_TIMEOUT_MS = "ble.commandTimeoutMs";
 
     private static final int DEFAULT_MAX_TRANSFERS = 1;
     private static final int DEFAULT_MAX_RETRIES = 3;
@@ -368,13 +372,133 @@ public final class QTaskPool {
             String error,
             TaskStage stage
     ) {
-        if (intent == null || intent.callback == null) {
+        finishIntent(intent, status, result, error, stage, 0);
+    }
+
+    private void finishIntent(
+            QueuedIntent intent,
+            TaskIntentStatus status,
+            String result,
+            String error,
+            TaskStage stage,
+            int code
+    ) {
+        if (intent == null) {
+            return;
+        }
+        cancelTimeout(intent);
+        // 所有终态都从这里收口：成功、失败、取消、删除、超时都只能回调一次。
+        if (!intent.finished.compareAndSet(false, true)) {
+            return;
+        }
+        if (intent.callback == null) {
             return;
         }
         final TaskResult taskResult = status == TaskIntentStatus.SUCCEEDED
                 ? TaskResult.success(result)
-                : TaskResult.failure(stage, error);
+                : TaskResult.failure(stage, code, error);
         postResult(intent.callback, taskResult);
+    }
+
+    private void cancelTimeout(QueuedIntent intent) {
+        if (intent == null) {
+            return;
+        }
+        Runnable r = intent.timeoutRunnable;
+        if (r != null) {
+            main.removeCallbacks(r);
+            intent.timeoutRunnable = null;
+        }
+    }
+
+    /** 只在真正开始写入时挂表：排队、寻人、连接阶段不消耗命令超时。 */
+    private void scheduleCommandTimeout(
+            TaskImpl task,
+            QueuedIntent intent,
+            QCommand command,
+            long generation
+    ) {
+        if (intent == null || intent.finished.get()) {
+            return;
+        }
+        cancelTimeout(intent);
+        long timeoutMs = resolveCommandTimeoutMs(task, command);
+        intent.effectiveTimeoutMs = timeoutMs;
+        if (timeoutMs <= 0L) {
+            return;
+        }
+        Runnable timeoutTask = () -> onCommandTimeout(task, intent, generation, timeoutMs);
+        intent.timeoutRunnable = timeoutTask;
+        main.postDelayed(timeoutTask, timeoutMs);
+    }
+
+    /**
+     * 优先级：单条命令 timeout(ms) &gt; 连接级 param.ble.commandTimeoutMs &gt; 全局配置 &gt; core 默认 8,000 ms。
+     */
+    private long resolveCommandTimeoutMs(TaskImpl task, QCommand command) {
+        if (command == null
+                || command.kind() != QCommand.Kind.SEND
+                || command.noAck()) {
+            return 0L;
+        }
+        long explicit = command.timeoutMs();
+        if (explicit >= 0L) {
+            return explicit;
+        }
+        String mac = task.currentMac();
+        if (mac == null || mac.isEmpty()) {
+            mac = task.deviceMac();
+        }
+        return BleSettings.getLong(
+                (mac == null || mac.isEmpty()) ? null : SessionRegistry.get(mac),
+                KEY_COMMAND_TIMEOUT_MS);
+    }
+
+    private void onCommandTimeout(
+            TaskImpl task,
+            QueuedIntent intent,
+            long generation,
+            long timeoutMs
+    ) {
+        if (intent == null
+                || intent.finished.get()
+                || task.isDeleted()
+                || !tasks.contains(task)
+                || task.sendGeneration() != generation
+                || task.getState() != TaskState.SENDING
+                || task.currentIntent() != intent) {
+            return;
+        }
+        QLog.w(TAG, "任务 " + task.id() + " 命令超时（" + timeoutMs + "ms）");
+        // 先递增代次再中止发送：底层若同步抛出迟到失败，也会被 startSend 的代次校验丢弃。
+        task.bumpSendGeneration();
+        adapter.abortSend(task.currentMac());
+        transferGate.release();
+        task.setWaitingForTransfer(false);
+        String error = "命令超时（" + timeoutMs + "ms）";
+        task.setError(error);
+        QueuedIntent completedIntent = task.clearCurrentIntent();
+        QCommand finished = task.command();
+        boolean keepConnection = (finished == null || !finished.disconnectAfter())
+                && (task.isConnectionDesired()
+                || (finished != null && finished.keepConnected()));
+        task.setCommand(null);
+        task.resetProgress();
+        task.resetRetry();
+        finishIntent(completedIntent, TaskIntentStatus.FAILED, null, error,
+                TaskStage.TIMEOUT, ErrorCode.TASK_TIMEOUT);
+        if (startNextPending(task)) {
+            return;
+        }
+        task.setOutcome(TaskOutcome.OPERATION_FAILED);
+        if (keepConnection) {
+            task.setState(TaskState.CONNECTED);
+        } else {
+            adapter.disconnect(task.currentMac());
+            task.setConnectionDesired(false);
+            task.setState(TaskState.READY);
+        }
+        notifyChanged();
     }
 
     /** 连接成功/失败时结清所有等待连接结果的意图。 */
@@ -738,6 +862,7 @@ public final class QTaskPool {
         notifyChanged();
         // 记录本次发送的代次：回调回来时校验，代次不一致说明是「取消/重新执行」前的旧发送残留，直接丢弃
         final long gen = task.sendGeneration();
+        scheduleCommandTimeout(task, task.currentIntent(), cmd, gen);
         adapter.send(task.currentMac(), cmd.json(), cmd.buildAttachments(), new BleAdapter.SendSink() {
             @Override
             public void onProgress(int sentBytes, int totalBytes) {
@@ -839,6 +964,8 @@ public final class QTaskPool {
         if (task.isDeleted() || !tasks.contains(task)) {
             return;
         }
+        // 发送失败进入重试：撤掉本轮命令超时，等下一次真正 startSend 时重新挂表。
+        cancelTimeout(task.currentIntent());
         task.bumpRetry();
         task.resetProgress();
         if (task.retryCount() <= maxRetries) {

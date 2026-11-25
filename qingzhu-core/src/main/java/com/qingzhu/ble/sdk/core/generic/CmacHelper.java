@@ -10,9 +10,9 @@ import org.bouncycastle.crypto.params.KeyParameter;
 /**
  * 通用积木：AES-CMAC(128)。
  *
- * 这段算法本身不含任何协议私有知识（不区分是 某类设备协议 还是 轮换地址协议 在用），
+ * 这段算法本身不含任何协议私有知识（不区分是 RDLCD 还是 TXPGGP 在用），
  * 现有系统里 TagEncryptUtil 在两个协议模块里各有一份逐行相同的拷贝
- *（《单协议架构解析-轮换地址协议.md》第6节观察点7），新架构里只保留这一份，
+ *（《单协议架构解析-TXPGGP.md》第6节观察点7），新架构里只保留这一份，
  * 两个协议的 AuthCmacStep 都调用这里，不再复制。
  */
 public final class CmacHelper {

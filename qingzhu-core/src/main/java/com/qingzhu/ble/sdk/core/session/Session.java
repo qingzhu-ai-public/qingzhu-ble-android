@@ -10,13 +10,13 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 每个连接对应一个 Session 实例，生命周期与连接一致（连接建立时创建，断开时清空/移除）。
  *
- * 硬性规则（对应架构设计文档第6节原则2/3）：
+ * 硬性规则（对应《新SDK架构-愿景与初步设计.md》第6节原则2/3）：
  * 1. 所有"连接过程中产生、之后还要用到"的状态（密钥、Nonce、序号计数器等），只能读写这个对象，
  *    不允许用静态字段 / 静态 Map 存储 —— 那样在多连接场景下会互相踩踏（现有 SecuritySessionHolder 的问题）。
  * 2. 步骤（ConnectStep）之间、管道环节（Filter）之间，只能通过 Session 交换数据，不允许有其他隐式通道。
  *
  * key 建议按协议自己的命名空间加前缀，避免不同协议/不同环节之间撞名，
- * 例如 "protocol.sessionKey"、"protocol.secretKey"。
+ * 例如 "nanolink_encrypt.sessionKey"、"txpggp.secretKey"。
  */
 public final class Session {
 

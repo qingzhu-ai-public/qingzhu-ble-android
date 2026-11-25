@@ -23,6 +23,10 @@ import java.util.concurrent.LinkedBlockingQueue;
  * 连接槎位调度器，语义对齐 ThreadPoolExecutor：core/max 决定同时能有几个连接活跃，
  * queue 决定超出时排多久，rejectionPolicy 决定队列也满了怎么处理。
  *
+ * 默认池的队列是<b>无界</b>（{@link #QUEUE_UNBOUNDED}）：超出并发容量的连接请求不会失败，
+ * 全部按 FIFO 排队，槽位释放后依次补位。适合「一次下发几百台设备」的场景，
+ * 代价是排队期间没有超时——前面的请求等多久，后面的就跟着等多久。
+ *
  * 单连接是这个模型的退化配置：new ConnectionPool(1, 1, 0, IMMEDIATE_FAIL)
  *（《新SDK架构-技术实现方案.md》第12.4节）。
  *
@@ -131,24 +135,35 @@ public final class ConnectionPool {
     private final ConcurrentHashMap<String, java.util.concurrent.CountDownLatch> gateLatchByMac =
             new ConcurrentHashMap<>();
 
+    /**
+     * 队列容量传这个值表示无界：超出并发容量的请求不会被拒绝，全部 FIFO 排队。
+     */
+    public static final int QUEUE_UNBOUNDED = -1;
+
     public ConnectionPool(int corePoolSize, int maxPoolSize, int queueCapacity, RejectionPolicy rejectionPolicy) {
         if (corePoolSize < 1 || maxPoolSize < corePoolSize) {
             throw new IllegalArgumentException("corePoolSize 必须 >= 1 且 maxPoolSize >= corePoolSize");
         }
         this.corePoolSize = corePoolSize;
         this.maxPoolSize = maxPoolSize;
-        // LinkedBlockingQueue 不支持容量 0，queueCapacity<=0 时退化为最小容量 1
+        // QUEUE_UNBOUNDED：无界队列，请求永不丢弃（顺序下发几百台设备时用）
+        // 其余情况：LinkedBlockingQueue 不支持容量 0，queueCapacity<=0 时退化为最小容量 1
         //（单连接 "不排队" 语义由 maxPoolSize 限制保证：池满即拒绝/挂起，几乎不会用到队列位）
-        this.waitingQueue = new LinkedBlockingQueue<>(Math.max(queueCapacity, 1));
+        this.waitingQueue = queueCapacity == QUEUE_UNBOUNDED
+                ? new LinkedBlockingQueue<>()
+                : new LinkedBlockingQueue<>(Math.max(queueCapacity, 1));
         this.rejectionPolicy = rejectionPolicy;
     }
 
     /**
      * 默认配置：初始并发容量 7（对齐 Android GATT 常见上限，之后可由
-     * {@link #setConcurrencyCapacity(int)} 按本机实际能力动态收放）、队列 16、满了直接拒绝。
+     * {@link #setConcurrencyCapacity(int)} 按本机实际能力动态收放）、<b>无界队列</b>。
+     *
+     * 队列无界意味着：一次提交几百台设备的连接请求也不会被拒绝，全部排队等槽位，
+     * 按 FIFO 依次建连。{@link RejectionPolicy} 在这种情况下不会被触发。
      */
     public static ConnectionPool defaultPool() {
-        return new ConnectionPool(1, 7, 16, RejectionPolicy.IMMEDIATE_FAIL);
+        return new ConnectionPool(1, 7, QUEUE_UNBOUNDED, RejectionPolicy.IMMEDIATE_FAIL);
     }
 
     /** 现有系统等价配置：只允许 1 个连接，不排队，新请求直接拒绝 */

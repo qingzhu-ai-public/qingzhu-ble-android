@@ -34,7 +34,7 @@ android {
 
 dependencies {
     // 开源门面：api 暴露新内核与开源协议，使用方直接可见 QDevice/QTask/QCommand 等类型。
-    // 不隐藏内核类型（开源无需隐藏内部类型），使用方可直接引用内核类型。
+    // 不做白标隐藏（开源无需隐藏内部类型），使用方可直接引用内核类型。
     api project(':qingzhu-core')
     // 两个开源示例协议：Eddystone（标准 beacon，Service Data 0xFEAA）
     // 与 Generic（自定义透传，Service Data 0xFFE0），识别条件互斥，可同时注册

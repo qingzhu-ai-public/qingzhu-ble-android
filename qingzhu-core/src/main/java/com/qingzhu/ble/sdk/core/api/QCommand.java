@@ -23,6 +23,9 @@ public final class QCommand {
 
     public enum Kind { CONNECT, SEND }
 
+    /** 使用 SDK 默认命令超时；0 表示该条命令不启用超时。 */
+    public static final long USE_DEFAULT_TIMEOUT_MS = -1L;
+
     private final Kind kind;
     private final String json;
     private final byte[] data;
@@ -31,10 +34,11 @@ public final class QCommand {
     private final boolean disconnectAfter;
     private final boolean noAck;
     private final ReconnectPolicy reconnectPolicy;
+    private final long timeoutMs;
 
     private QCommand(Kind kind, String json, byte[] data, Map<String, Object> attachments,
                      boolean keepConnected, boolean disconnectAfter, boolean noAck,
-                     ReconnectPolicy reconnectPolicy) {
+                     ReconnectPolicy reconnectPolicy, long timeoutMs) {
         this.kind = kind;
         this.json = json;
         this.data = data;
@@ -43,6 +47,7 @@ public final class QCommand {
         this.disconnectAfter = disconnectAfter;
         this.noAck = noAck;
         this.reconnectPolicy = reconnectPolicy;
+        this.timeoutMs = timeoutMs;
     }
 
     public Kind kind() { return kind; }
@@ -55,6 +60,12 @@ public final class QCommand {
     /** 是否不要求从机应答（协议是否支持由协议层决定） */
     public boolean noAck() { return noAck; }
     public ReconnectPolicy reconnectPolicy() { return reconnectPolicy; }
+
+    /**
+     * 单条命令的应答超时（毫秒）：
+     * {@link #USE_DEFAULT_TIMEOUT_MS} = 用 SDK 默认，0 = 不启用，&gt;0 = 覆盖默认值。
+     */
+    public long timeoutMs() { return timeoutMs; }
 
     /** 所有附件字节总和（用于判断是否大数据、是否需要请求高连接优先级） */
     public int totalPayloadSize() {
@@ -95,6 +106,7 @@ public final class QCommand {
         private boolean disconnectAfter;
         private boolean noAck;
         private ReconnectPolicy reconnectPolicy = ReconnectPolicy.OFF;
+        private long timeoutMs = USE_DEFAULT_TIMEOUT_MS;
 
         /** 连接并保持 */
         public Builder connect() {
@@ -146,6 +158,15 @@ public final class QCommand {
             return this;
         }
 
+        /**
+         * 单条命令应答超时（毫秒）：-1 = 用 SDK 默认（默认 8,000 ms），0 = 不启用，&gt;0 = 覆盖。
+         * 只对一问一答的 SEND 命令生效；CONNECT 与 noAck 命令不启用。
+         */
+        public Builder timeout(long timeoutMs) {
+            this.timeoutMs = timeoutMs;
+            return this;
+        }
+
         /** 连接意外断开后的自动重连策略（默认 {@link ReconnectPolicy#OFF}） */
         public Builder reconnect(ReconnectPolicy reconnectPolicy) {
             this.reconnectPolicy = reconnectPolicy;
@@ -159,8 +180,11 @@ public final class QCommand {
             if (keepConnected && disconnectAfter) {
                 throw new IllegalStateException("keepConnected() 与 disconnectAfter() 互斥，只能选其一");
             }
+            if (timeoutMs < USE_DEFAULT_TIMEOUT_MS) {
+                throw new IllegalArgumentException("timeout 不能小于 -1（-1=默认，0=不超时）");
+            }
             return new QCommand(kind, json, data, attachments, keepConnected, disconnectAfter,
-                    noAck, reconnectPolicy);
+                    noAck, reconnectPolicy, timeoutMs);
         }
     }
 }

@@ -10,20 +10,26 @@ public final class TaskResult {
     private final String payload;
     private final String error;
     private final TaskStage stage;
+    private final int code;
 
-    private TaskResult(boolean success, String payload, String error, TaskStage stage) {
+    private TaskResult(boolean success, String payload, String error, TaskStage stage, int code) {
         this.success = success;
         this.payload = payload;
         this.error = error;
         this.stage = stage;
+        this.code = code;
     }
 
     public static TaskResult success(String payload) {
-        return new TaskResult(true, payload, null, null);
+        return new TaskResult(true, payload, null, null, 0);
     }
 
     public static TaskResult failure(TaskStage stage, String error) {
-        return new TaskResult(false, null, error, stage);
+        return failure(stage, 0, error);
+    }
+
+    public static TaskResult failure(TaskStage stage, int code, String error) {
+        return new TaskResult(false, null, error, stage, code);
     }
 
     public boolean isSuccess() { return success; }
@@ -36,4 +42,7 @@ public final class TaskResult {
 
     /** 失败所处阶段；成功时为 null */
     public TaskStage stage() { return stage; }
+
+    /** 内核错误码；0 = 未附错误码，命令超时为 {@code ErrorCode.TASK_TIMEOUT} */
+    public int code() { return code; }
 }

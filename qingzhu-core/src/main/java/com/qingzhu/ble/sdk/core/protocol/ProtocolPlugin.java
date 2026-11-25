@@ -140,7 +140,7 @@ public interface ProtocolPlugin {
      * <p>默认 {@code false}（<b>保留配对</b>）：需要系统配对的设备（加密特征、HID 等）靠系统配对
      * 工作，断开后必须保留配对，否则下次连不上。
      *
-     * <p>返回 {@code true} 的协议（如 轮换地址协议——用应用层 CMAC 认证、不需要系统配对）：配对过的
+     * <p>返回 {@code true} 的协议（如 TXPGGP——用应用层 CMAC 认证、不需要系统配对）：配对过的
      * 从端重启后倾向用<b>定向广播</b>只发给已配对手机，普通 LE 扫描收不到，表现为「关机重启后
      * 列表不显示」。这类协议应在断开时主动解绑，清掉历史残留的配对（旧 SDK 的 safeRemoveBondDelayed
      * 同款做法）。
@@ -152,8 +152,8 @@ public interface ProtocolPlugin {
     /**
      * 可选：暴露本协议的<b>可配置项</b>（key/类型/默认值/说明）。
      *
-     * 职责分离（分层设计）：协议只负责"暴露 + 默认值"，<b>定制权在宿主 SDK</b>——
-     * 宿主 SDK 通过 {@link com.qingzhu.ble.sdk.core.protocol.ProtocolParams} 设置值：
+     * 职责分离（白标分层）：协议只负责"暴露 + 默认值"，<b>定制权在公司 SDK</b>——
+     * 公司 SDK 通过 {@link com.qingzhu.ble.sdk.core.protocol.ProtocolParams} 设置值：
      * 扫描相关参数由门面读出来拼进 ScanConfig，连接相关参数随 connect 复制进 Session
      * （key 加 "param." 前缀），协议自己的步骤/Filter 据此读取。
      *

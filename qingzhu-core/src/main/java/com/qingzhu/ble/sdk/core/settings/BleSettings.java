@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <h3>为什么要有它（替代原来"声明与赋值分家"的做法）</h3>
  * 之前配置一件事要跨好几处：协议 {@code configurableParams()} 声明 key → 门面
- * {@code applyHostDefaults()} 设值 → connect 传参 → {@code copyInto(session)} →
+ * {@code applyCompanyDefaults()} 设值 → connect 传参 → {@code copyInto(session)} →
  * 协议再读 {@code session.get("param.xxx")}。开发者看协议代码根本不知道"我要配的话在哪配"，
  * 而且同一件事还有两个通道并存（有校验的 {@code ProtocolParams} 与无校验的
  * {@code ConnectParams.extras}）。
@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *   BleSettings.get()
  *           .writeType(1)                            // 无响应写，传大包更快（core 内置项用强类型 API）
  *           .highConnectionPriority(true)
- *           .set("protocol.option", 15);    // 协议专属项仍用 set(key, value)
+ *           .set("txpggp.rescanTimeoutSec", 15);    // 协议专属项仍用 set(key, value)
  *   // 不配置 = 用声明里的默认值，一行都不用写
  * </pre>
  *
@@ -89,6 +89,9 @@ public final class BleSettings {
                     "连续多少次心跳无应答判离线（判离线后主动断开并触发自动重连）"),
             ProtocolParam.ofInt("ble.scanTimeoutSec", 0,
                     "扫描超时（秒）：>0 定时扫描，到时自动停止并回调「扫描已停止」；0 = 持续扫描不停（默认）"),
+            ProtocolParam.ofLong("ble.commandTimeoutMs", 8000L,
+                    "单条 SEND 命令等待设备应答的超时（毫秒）：>0 启用，0 = 不启用；"
+                            + "CONNECT 与 noAck 命令不启用。单条命令可用 QCommand.Builder.timeout(ms) 覆盖"),
             ProtocolParam.ofBool("ble.debugLog", true,
                     "输出 debug/warning 日志：关闭后只输出错误日志（e），减少扫描/连接高频日志的 logcat 开销")));
 
@@ -160,6 +163,16 @@ public final class BleSettings {
     /** 连续多少次心跳无应答判离线。等价于 set("heartbeat.maxMiss", v) */
     public BleSettings heartbeatMaxMiss(int v) { set("heartbeat.maxMiss", v); return this; }
     public int heartbeatMaxMiss() { return getInt("heartbeat.maxMiss"); }
+
+    /** 单条 SEND 命令应答超时（毫秒），默认 8,000；0 = 不启用。等价于 set("ble.commandTimeoutMs", v) */
+    public BleSettings commandTimeoutMs(long v) {
+        if (v < 0) {
+            throw new IllegalArgumentException("命令超时不能为负数（0 = 不启用）");
+        }
+        set("ble.commandTimeoutMs", v);
+        return this;
+    }
+    public long commandTimeoutMs() { return getLong("ble.commandTimeoutMs"); }
 
     /** 恢复某一项为声明里的默认值 */
     public BleSettings reset(String key) {

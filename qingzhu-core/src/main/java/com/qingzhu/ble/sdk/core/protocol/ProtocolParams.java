@@ -14,16 +14,16 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 协议参数值容器：按 {@link ProtocolParam} 声明做 key/类型校验的键值对。
  *
- * 用法（宿主 SDK 侧）：
+ * 用法（公司 SDK 侧）：
  * <pre>
- *     ProtocolParams params = new ProtocolParams(new MyProtocolPlugin());
- *     params.set("scan.scanMode", ScanSettings.SCAN_MODE_LOW_LATENCY);  // 宿主定制
+ *     ProtocolParams params = new ProtocolParams(new TxpggpProtocolPlugin());
+ *     params.set("scan.scanMode", ScanSettings.SCAN_MODE_LOW_LATENCY);  // 公司定制
  *     // 构造时已填入协议声明的默认值，set 过的就是定制过的
  * </pre>
  *
  * 生效路径：
  * 1. connect 时传入 → 连接池复制进 Session（key 加 "param." 前缀），协议步骤/Filter 读取；
- * 2. 扫描相关参数由宿主 SDK 门面自己读出来拼进 ScanConfig（协议声明什么可调，门面就暴露什么）。
+ * 2. 扫描相关参数由公司 SDK 门面自己读出来拼进 ScanConfig（协议声明什么可调，门面就暴露什么）。
  *
  * 校验规则：set 不存在的 key 或类型不匹配直接抛 IllegalArgumentException——
  * 配置错误应该在开发期暴露，而不是静默失效让线上行为难以解释。
@@ -95,7 +95,7 @@ public final class ProtocolParams {
         return Collections.unmodifiableMap(new LinkedHashMap<>(values));
     }
 
-    /** 全部参数声明（key/类型/默认值/说明）——宿主 SDK 可以据此生成配置界面 */
+    /** 全部参数声明（key/类型/默认值/说明）——公司 SDK 可以据此生成配置界面 */
     public List<ProtocolParam> getSpecs() {
         return Collections.unmodifiableList(
                 specs.values().stream().collect(java.util.stream.Collectors.toList()));

@@ -125,7 +125,7 @@ public final class ScanEngine {
         if (!running) return;
         advCounter.incrementAndGet();
         long now = System.currentTimeMillis();
-        // 同一广播会话内设备的 bleMac 不变（轮换地址协议 从端是 Android，断开重播才换 MAC）：
+        // 同一广播会话内设备的 bleMac 不变（TXPGGP 从端是 Android，断开重播才换 MAC）：
         // 即使本帧不是"身份帧"（内容帧无法识别、不携带 deviceMac），只要这个 bleMac
         // 之前被识别过，就刷新它的"最后见到"时间——否则轮播设备（身份帧稀疏、内容帧密集）
         // 会被误判"离开范围"（表现为 UI 反复置灰）。设备仍保留在快照里，不删除。
@@ -155,7 +155,7 @@ public final class ScanEngine {
             QDevice previous = byStableId.get(device.getStableId());
             if (previous != null) {
                 // 同 stableId 设备已存在：用本次广播的新对象替换旧对象，而不是把新字段合并进旧对象。
-                // QDevice.mac 是 final——若复用旧对象，轮换地址协议 断开后地址轮换，mac 会永远停在首次发现的旧地址，
+                // QDevice.mac 是 final——若复用旧对象，TXPGGP 断开后地址轮换，mac 会永远停在首次发现的旧地址，
                 // ScanCache 随之写回旧地址，重寻址拿到旧地址去连，connectGatt 无响应。
                 // 旧版即整体 put 覆盖，地址随广播更新。此处保留"多帧字段共存"：旧对象里新帧没解析出的字段补进来。
                 carryOverMetadata(device, previous);

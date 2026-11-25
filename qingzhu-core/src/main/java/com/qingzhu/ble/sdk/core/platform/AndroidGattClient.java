@@ -1137,9 +1137,9 @@ public final class AndroidGattClient implements GattClient, NativeGatt {
         }
         OPEN_GATTS.remove(g);
         // 关闭后按协议开关决定是否解除系统配对（对齐旧 SDK safeRemoveBondDelayed）：配对过的
-        // 从端（轮换地址协议）重启后倾向用定向广播只发给已配对手机，普通扫描收不到。但需要系统配对
+        // 从端（TXPGGP）重启后倾向用定向广播只发给已配对手机，普通扫描收不到。但需要系统配对
         // 的设备（加密特征/HID）必须保留配对——是否解绑由协议 removeBondOnDisconnect() 决定，
-        // 默认 false（保留配对），轮换地址协议 返回 true（解绑清残留）。
+        // 默认 false（保留配对），TXPGGP 返回 true（解绑清残留）。
         if (removeBondOnDisconnect) {
             scheduleRemoveBond(g);
         }

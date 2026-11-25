@@ -7,7 +7,7 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * 通用积木：不同协议 共用的流加密状态机，对应现有 SingleCipherUtil。
+ * 通用积木：TXPGGP/RDLCD 共用的流加密状态机，对应现有 SingleCipherUtil。
  *
  * 关键真实细节（与之前简化版 SingleCipherHelper 的固定 nonce 不同，那是错的）：
  * 1. nonce 不是固定值，是用认证挑战随机数（8字节，取前4字节）做 CMAC 得到 16 字节结果，

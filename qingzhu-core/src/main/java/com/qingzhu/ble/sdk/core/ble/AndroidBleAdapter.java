@@ -154,7 +154,7 @@ public final class AndroidBleAdapter implements BleAdapter {
             // 协议只声明「系统扫描参数」(scanConfig) 和「厂商 ID」(scanManufacturerIds)，core 负责
             // 合并配置 + 构建原生 ScanFilter 下沉到芯片 offload（对齐旧架构的厂商 ID 过滤，扫得快）。
             // 关键：只有【所有协议都声明了厂商 ID】才下沉硬件过滤——存在靠名称/内容识别的协议
-            // （如 无厂商数据协议，广播没有厂商数据段）时，厂商 filter 会把它们的广播在芯片层直接丢弃，
+            // （如 PGLCD，广播没有厂商数据段）时，厂商 filter 会把它们的广播在芯片层直接丢弃，
             // 必须退回全量广播进软件识别。
             ScanConfig protocolConfig = null;
             List<ScanFilter> hardwareFilters = null;

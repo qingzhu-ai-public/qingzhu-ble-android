@@ -13,11 +13,14 @@ import com.qingzhu.ble.sdk.core.api.TaskSnapshot;
 import com.qingzhu.ble.sdk.core.api.TaskStage;
 import com.qingzhu.ble.sdk.core.api.TaskState;
 import com.qingzhu.ble.sdk.core.ble.BleAdapter;
+import com.qingzhu.ble.sdk.core.common.ErrorCode;
 import com.qingzhu.ble.sdk.core.connect.ConnectParams;
 import com.qingzhu.ble.sdk.core.device.QDevice;
 import com.qingzhu.ble.sdk.core.pool.ReconnectPolicy;
 import com.qingzhu.ble.sdk.core.protocol.ProtocolType;
+import com.qingzhu.ble.sdk.core.settings.BleSettings;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,6 +31,7 @@ import org.robolectric.annotation.Config;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -52,6 +56,11 @@ public class QTaskPoolIntentTest {
         pool.setMaxTransfers(1);
         pool.setMaxPendingIntents(8);
         device = new QDevice("AA:BB:CC:DD:EE:01", "device", -40, ProtocolType.of("test"));
+    }
+
+    @After
+    public void tearDown() {
+        BleSettings.get().reset("ble.commandTimeoutMs");
     }
 
     /** 创建任务并连接成功，返回处于 CONNECTED 的任务 */
@@ -297,6 +306,64 @@ public class QTaskPoolIntentTest {
         QCommand.builder().send("{}").keepConnected().disconnectAfter().build();
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void timeoutBelowUseDefaultIsRejected() {
+        QCommand.builder().send("{}").timeout(-2L).build();
+    }
+
+    @Test
+    public void defaultCommandTimeoutReturnsTaskTimeoutOnce() {
+        QTask task = connectedTask();
+        List<TaskResult> results = new ArrayList<>();
+
+        task.send(QCommand.builder().send("{}").keepConnected().build(), results::add);
+        waitForSendCount(1);
+        advance(8_001L);
+
+        assertEquals(1, results.size());
+        assertFalse(results.get(0).isSuccess());
+        assertEquals(TaskStage.TIMEOUT, results.get(0).stage());
+        assertEquals(ErrorCode.TASK_TIMEOUT, results.get(0).code());
+        assertEquals(1, adapter.abortCalls);
+        assertEquals(TaskState.CONNECTED, task.getState());
+    }
+
+    @Test
+    public void successBeforeTimeoutCancelsTimer() {
+        BleSettings.get().commandTimeoutMs(50L);
+        QTask task = connectedTask();
+        List<TaskResult> results = new ArrayList<>();
+
+        task.send(QCommand.builder().send("{}").keepConnected().build(), results::add);
+        waitForSendCount(1);
+        adapter.sendSink.onDone("echo");
+        idle();
+        advance(100L);
+
+        assertEquals(1, results.size());
+        assertTrue(results.get(0).isSuccess());
+        assertEquals("echo", results.get(0).payload());
+        assertEquals(0, adapter.abortCalls);
+    }
+
+    @Test
+    public void timeoutZeroDisablesTimerForSingleCommand() {
+        BleSettings.get().commandTimeoutMs(50L);
+        QTask task = connectedTask();
+        List<TaskResult> results = new ArrayList<>();
+
+        task.send(QCommand.builder().send("{}").timeout(0L).keepConnected().build(), results::add);
+        waitForSendCount(1);
+        advance(100L);
+        assertEquals(0, results.size());
+        assertEquals(0, adapter.abortCalls);
+
+        adapter.sendSink.onDone("ok");
+        idle();
+        assertEquals(1, results.size());
+        assertTrue(results.get(0).isSuccess());
+    }
+
     private void waitForSendCount(int expected) {
         long deadline = System.currentTimeMillis() + 2_000L;
         while (adapter.sentCommands.size() < expected && System.currentTimeMillis() < deadline) {
@@ -314,6 +381,10 @@ public class QTaskPoolIntentTest {
 
     private void idle() {
         Shadows.shadowOf(Looper.getMainLooper()).idle();
+    }
+
+    private void advance(long millis) {
+        Shadows.shadowOf(Looper.getMainLooper()).idle(millis, TimeUnit.MILLISECONDS);
     }
 
     private static final class FakeBleAdapter implements BleAdapter {

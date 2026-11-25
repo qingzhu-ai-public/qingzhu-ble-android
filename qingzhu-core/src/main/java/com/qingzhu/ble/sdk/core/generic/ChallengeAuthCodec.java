@@ -6,13 +6,13 @@ package com.qingzhu.ble.sdk.core.generic;
 /**
  * 通用积木：挑战应答认证帧的编解码（moveChar 混淆 + CMAC 拼接）。
  *
- * 对应现有 不同协议 共用的 TagOperate.createAuthData/moveChar 逻辑：
+ * 对应现有 TXPGGP/RDLCD 共用的 TagOperate.createAuthData/moveChar 逻辑：
  * - 发送帧 = [8字节随机数][CMAC(密钥,随机数)的前8字节]，拼成16字节后做 moveChar 混淆再发出；
  * - 校验设备应答 = 先对收到的16字节做 moveChar 逆混淆（moveChar 是自逆操作，正逆用同一个函数），
  *   前8字节是设备侧发回的随机数，后8字节是设备侧签名，
  *   本地用同样的随机数重新算 CMAC，只比较前 compareLen 字节（现有实现固定比较半长，即4字节）。
  *
- * 这段编码规则本身不含任何协议私有知识（某类设备协议/轮换地址协议 逐行相同），收敛成一份放进 core 的
+ * 这段编码规则本身不含任何协议私有知识（RDLCD/TXPGGP 逐行相同），收敛成一份放进 core 的
  * 通用积木区，两个协议的 AuthCmacStep 共用，不再各自维护一份拷贝。
  */
 public final class ChallengeAuthCodec {

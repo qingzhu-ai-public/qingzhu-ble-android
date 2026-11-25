@@ -21,7 +21,7 @@ import java.util.List;
  *
  * 两条流程在"GATT 建立后"汇合到同一套统一收尾 {@link #afterConnected}：
  * removeBond 策略 → discoverServices → 协议 onGattReady（MTU/通知/认证）——
- * 自定义步骤流程（如 轮换地址协议 裸连）不再需要自己重写这段，也保证 removeBond / 认证行为一致。
+ * 自定义步骤流程（如 TXPGGP 裸连）不再需要自己重写这段，也保证 removeBond / 认证行为一致。
  *
  * 这个类本身无状态：两次并发调用 connect()，只要传入不同的 Session，
  * 彼此互不干扰，这是多连接能落地的前提之一。
@@ -44,7 +44,7 @@ public final class ConnectionEngine {
 
     /**
      * 自定义连接流程（协议覆写 connectSteps() 时走这里）：按顺序执行协议的连接步骤
-     * （如 轮换地址协议 的裸连：重寻址 → connectGatt → adopt → setPreferredPhy），
+     * （如 TXPGGP 的裸连：重寻址 → connectGatt → adopt → setPreferredPhy），
      * 全部步骤完成（GATT 已建立）后进入统一收尾。
      */
     public void connect(Session session, List<ConnectStepSpec> steps, ProtocolPlugin plugin, ConnectListener listener) {
@@ -108,7 +108,7 @@ public final class ConnectionEngine {
                     "连接成功但 Session 里没有 GATT_CLIENT（连接前钩子/裸连步骤未正确挂载）");
             return;
         }
-        // 按协议开关决定断开时是否解除系统配对（removeBond）：轮换地址协议 用应用层认证、需解绑清残留，
+        // 按协议开关决定断开时是否解除系统配对（removeBond）：TXPGGP 用应用层认证、需解绑清残留，
         // 需要系统配对的设备则保留配对。默认 false，不误伤任何协议。
         if (client instanceof AndroidGattClient) {
             ((AndroidGattClient) client).setRemoveBondOnDisconnect(plugin.removeBondOnDisconnect());

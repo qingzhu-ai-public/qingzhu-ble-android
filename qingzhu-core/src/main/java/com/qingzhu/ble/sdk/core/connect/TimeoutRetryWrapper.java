@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * 统一负责每一步的超时、重试。协议只在 ConnectStepSpec 里声明策略参数（RetryConfig），
  * 不需要、也不允许自己实现重试循环——这条规则保证"重试逻辑"这类骨架代码永远只有一份实现，
- * 不会被每个协议各自复制一遍（对应 不同协议 现有代码里各自维护一套重试逻辑的问题）。
+ * 不会被每个协议各自复制一遍（对应 TXPGGP/RDLCD 现有代码里各自维护一套重试逻辑的问题）。
  */
 public final class TimeoutRetryWrapper {
 

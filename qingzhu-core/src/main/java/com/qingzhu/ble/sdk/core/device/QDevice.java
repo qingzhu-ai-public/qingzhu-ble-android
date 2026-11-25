@@ -154,7 +154,7 @@ public final class QDevice {
     }
 
     /**
-     * 把扫描阶段解析出的 metadata（如 轮换地址协议 的 deviceMac）逐条复制进 Session。
+     * 把扫描阶段解析出的 metadata（如 TXPGGP 的 deviceMac）逐条复制进 Session。
      *
      * 这是连接建立时的必要一步——否则连接阶段（如重寻址）读不到扫描阶段
      * 解析出的字段，只能退化用别的值兜底，容易导致查缓存查不到、误判失败。

@@ -12,12 +12,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** 一次连接请求：等不到空闲槎位、或设备还在释放中时进队列排队（同一设备重复请求只保留最新一次） */
 public final class ConnectRequest {
 
-    /** 完整保留扫描阶段的 QDevice（含 metadata，如 轮换地址协议 的 deviceMac）——排队重连时 SmartRescan 依赖 */
+    /** 完整保留扫描阶段的 QDevice（含 metadata，如 TXPGGP 的 deviceMac）——排队重连时 SmartRescan 依赖 */
     private final QDevice device;
     private final PoolConnectListener listener;
     /** 自动重连策略（意外断开时生效），默认 OFF */
     private final ReconnectPolicy reconnectPolicy;
-    /** 协议参数（宿主 SDK 定制的值，可空）——连接时复制进 Session，协议步骤/Filter 读取 */
+    /** 协议参数（公司 SDK 定制的值，可空）——连接时复制进 Session，协议步骤/Filter 读取 */
     private final ProtocolParams params;
     /** 连接参数（门面 builder 收集，可空）——默认连接流程时传给连接前钩子/标准连接 */
     private final ConnectParams connectParams;

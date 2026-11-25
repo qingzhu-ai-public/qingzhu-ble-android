@@ -11,6 +11,8 @@ public enum TaskStage {
     CONNECT,
     /** 发送数据 */
     SEND,
+    /** 命令等待应答超时 */
+    TIMEOUT,
     /** 被取消 */
     CANCEL,
     /** 被删除 */

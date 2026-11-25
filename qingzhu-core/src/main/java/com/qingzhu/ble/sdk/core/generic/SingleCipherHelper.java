@@ -9,7 +9,7 @@ import javax.crypto.spec.SecretKeySpec;
 /**
  * 通用积木：AES-ECB 密钥流 + nonce/counter XOR 流加密。
  *
- * 对应现有系统的 SingleCipherUtil（某类设备协议/轮换地址协议 各有一份独立拷贝，130~172 行不等）。
+ * 对应现有系统的 SingleCipherUtil（RDLCD/TXPGGP 各有一份独立拷贝，130~172 行不等）。
  * 算法本身是"密钥 + nonce 派生密钥流，再跟明文/密文做 XOR"，是对称操作
  *（encrypt 和 decrypt 是同一段代码），不含协议私有知识，收敛成一份放进 core 的通用积木区。
  *

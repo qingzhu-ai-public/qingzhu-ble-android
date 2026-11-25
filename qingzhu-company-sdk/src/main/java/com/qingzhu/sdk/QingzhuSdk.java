@@ -156,7 +156,7 @@ public final class QingzhuSdk {
         QSdk.getInstance().setMaxRetries(n);
     }
 
-    /** 每台设备最多排队多少条待执行命令，默认 10,000；0 表示忙碌时直接失败 */
+    /** 每台设备最多排队多少条待执行命令，默认 10_000；0 表示忙碌时直接失败 */
     public static void setMaxPendingIntents(int n) {
         QSdk.getInstance().setMaxPendingIntents(n);
     }
@@ -164,6 +164,11 @@ public final class QingzhuSdk {
     /** 系统连接状态回调兜底超时，默认 20 秒，最小 5 秒 */
     public static void setConnectCallbackTimeoutMs(long timeoutMs) {
         QSdk.getInstance().setConnectCallbackTimeoutMs(timeoutMs);
+    }
+
+    /** 单条 SEND 命令应答超时，默认 8,000 ms；0 = 不启用；CONNECT / noAck 命令不启用 */
+    public static void setCommandTimeoutMs(long timeoutMs) {
+        QSdk.getInstance().setCommandTimeoutMs(timeoutMs);
     }
 
     /** 当前连接并发容量（自动学习时为内核建议值） */

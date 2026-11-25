@@ -16,7 +16,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  *
  * A 设备执行命令时，B 设备提交命令只进 B 自己的队列，物理上碰不到 A 的执行槎位——
  * 这是"多连接"从"不可能"变成"默认支持"的关键：不是加新功能，是把原来错误的全局锁粒度
- * 改成按连接的锁粒度（技术设计文档第12.5节）。
+ * 改成按连接的锁粒度（《新SDK架构-技术实现方案.md》第12.5节）。
  *
  * <p><b>并发安全</b>：执行位用 {@code putIfAbsent} 原子占位。此前的"先查 containsKey 再 put"
  * 存在 check-then-act 竞态——两个线程同时提交同一 mac 的任务时可能都看到执行位空闲，
