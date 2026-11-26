@@ -2,1021 +2,552 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>青竹 BLE SDK · 文档</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>青竹 BLE SDK · 一套内核，管好所有 BLE 设备</title>
+<meta name="description" content="青竹 Android BLE SDK：以任务为中心，扫描、连接、发送、重试、收尾全托管；协议插件化，一套内核服务多类产品。产品价值、API 文档、协议对接与架构设计。">
 <style>
-:root{
-  --bg:#F5F7FB; --ink:#0F131B; --soft:#6C7889; --line:#E1E6F0; --line2:#EFF2F8;
-  --blue:#2F6BE0; --blue-bg:#EDF3FE; --blue-line:#CFDEFA;
-  --dark:#0F1A2E; --green:#0E8A5F; --amber:#B26B00; --red:#C0392B;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
-  --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
-}
-*,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:32px}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 var(--sans);-webkit-font-smoothing:antialiased}
+  :root{
+    --ink:#0B1220; --bg:#F6F7F9; --card:#FFFFFF; --muted:#5C6470; --faint:#9AA1AB;
+    --line:#E3E6EA; --soft:#EEF0F3;
+    --blue:#2563EB; --blue-2:#1D4ED8; --blue-soft:#EDF3FE; --blue-line:#C8D9F7;
+    --code-bg:#121826; --code-ink:#D8DCE2; --code-cm:#7C8590; --code-kw:#82B1FF;
+    --code-str:#C7D6F0; --code-num:#E2E6EB;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);line-height:1.8;font-size:16px;
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif}
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,pre{font-family:ui-monospace,"SF Mono",Consolas,"Liberation Mono",monospace}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
 
-/* 侧栏：主视图 + 本页目录 */
-.side{position:fixed;inset:0 auto 0 0;width:236px;overflow-y:auto;background:#fff;border-right:1px solid var(--line);padding:28px 14px;z-index:20}
-.side b{display:block;font-size:14px;padding:0 10px}
-.side em{display:block;font:400 10.5px/1.8 var(--mono);color:#AEB8C8;letter-spacing:.15em;font-style:normal;padding:0 10px;margin-top:3px;text-transform:uppercase}
-.side nav{margin-top:22px;display:flex;flex-direction:column;gap:1px}
-.side a{display:flex;gap:9px;align-items:baseline;padding:7px 10px;border-radius:6px;color:#4A5568;text-decoration:none;font-size:13px;transition:.15s;cursor:pointer}
-.side a i{font:600 10px var(--mono);color:#C3CCDB;font-style:normal}
-.side a:hover{background:#F5F8FD;color:var(--blue)}
-.side a.on{background:var(--blue-bg);color:var(--blue);font-weight:600}
-.side a.on i{color:var(--blue)}
-.side .sep{margin:16px 10px 6px;font:600 10px var(--mono);letter-spacing:.14em;color:#C3CCDB;text-transform:uppercase}
-.side #toc a{font-size:12.5px;padding:5px 10px}
+  /* topbar */
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .topbar-in{max-width:1120px;margin:0 auto;padding:0 24px;height:62px;display:flex;align-items:center;gap:22px}
+  .brand{font-weight:800;font-size:16px;white-space:nowrap;color:var(--ink)}
+  .brand span{color:var(--blue)}
+  .nav{display:flex;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{font-size:13.5px;color:var(--muted);padding:6px 11px;border-radius:8px;white-space:nowrap}
+  .nav a:hover{color:var(--ink);background:var(--soft);text-decoration:none}
+  .nav a.on{color:var(--blue);background:var(--blue-soft);font-weight:700}
+  .topbar .ext{font-size:13px;font-weight:700;white-space:nowrap;border:1px solid var(--blue-line);
+    background:var(--blue-soft);border-radius:8px;padding:6px 12px;color:var(--blue-2)}
 
-.main{margin-left:236px;padding:0 48px 120px}
-.wrap{max-width:960px;margin:0 auto}
-.view[hidden]{display:none !important}
+  /* hero */
+  .hero{background:radial-gradient(1100px 480px at 78% -10%,rgba(37,99,235,.28),transparent 60%),
+    linear-gradient(160deg,#0B1220 0%,#111C31 60%,#0B1220 100%);color:#fff;padding:86px 0 54px}
+  .eyebrow{font-size:11.5px;font-weight:800;letter-spacing:2.4px;color:#8FB2FF;margin-bottom:18px}
+  .hero h1{font-size:46px;line-height:1.25;letter-spacing:-.02em;font-weight:800;max-width:820px}
+  .hero h1 span{color:#8FB2FF}
+  .hero-lead{margin-top:20px;font-size:17px;line-height:1.95;color:#B9C4D4;max-width:780px}
+  .hero-lead b{color:#fff}
+  .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
+  .btn{display:inline-block;font-size:14.5px;font-weight:700;border-radius:9px;padding:11px 22px;
+    background:var(--blue);color:#fff;border:1px solid var(--blue);cursor:pointer;transition:.15s}
+  .btn:hover{background:var(--blue-2);text-decoration:none}
+  .btn.ghost{background:transparent;border-color:rgba(255,255,255,.28);color:#DCE5F2}
+  .btn.ghost:hover{background:rgba(255,255,255,.08)}
+  .hero-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:52px;
+    border-top:1px solid rgba(255,255,255,.14);padding-top:24px}
+  .hs b{display:block;font-size:22px;font-weight:800;color:#fff;line-height:1.4}
+  .hs span{display:block;font-size:12px;color:#93A2B8;line-height:1.6}
 
-.hero{padding:88px 0 26px}
-.hero h1{font-size:42px;line-height:1.18;margin:0;letter-spacing:-.03em;font-weight:700}
-.hero h1 span{color:#AEB8C8;font-weight:400}
-.hero p{margin:20px 0 0;font-size:16.5px;color:#4A5568;max-width:720px;line-height:1.8}
-.tags{display:flex;gap:8px;margin-top:24px;flex-wrap:wrap}
-.tag{font:500 12px var(--mono);color:#5A6779;background:#fff;border:1px solid var(--line);padding:5px 11px;border-radius:5px}
+  /* modules */
+  .mod{padding:76px 0;scroll-margin-top:62px}
+  .mod.alt{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .mod-head{margin-bottom:38px}
+  .no{display:inline-block;font-size:12px;font-weight:800;letter-spacing:1.5px;color:var(--blue);
+    background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:3px 13px}
+  .mod-head h2{font-size:32px;line-height:1.4;margin-top:14px;letter-spacing:-.01em}
+  .mod-head p{color:var(--muted);font-size:16px;max-width:820px;margin-top:10px}
+  h3.sec{font-size:20px;margin:42px 0 16px;padding-left:12px;border-left:4px solid var(--blue)}
+  h3.sec:first-of-type{margin-top:0}
+  p.sec-lead{color:var(--muted);font-size:14.5px;margin:-6px 0 18px}
 
-section{padding:54px 0;border-top:1px solid var(--line)}
-.hd{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
-.hd .no{font:600 12px var(--mono);color:#C3CCDB;letter-spacing:.1em}
-.hd h2{font-size:23px;margin:0;letter-spacing:-.01em;font-weight:650}
-.lead{margin:0 0 22px;font-size:14px;color:var(--soft);max-width:780px}
-.cap{margin:16px 0 0;font-size:13px;line-height:1.7;color:var(--soft);text-align:center}
-.cap a{color:var(--blue);text-decoration:none}
+  /* cards */
+  .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px}
+  .mod.alt .card{background:var(--bg)}
+  .card .tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:1px;color:var(--blue);
+    background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:2px 9px;margin-bottom:10px}
+  .card h4{font-size:16px;margin-bottom:6px}
+  .card p{font-size:13.5px;color:var(--muted);line-height:1.8}
+  .card .mini{margin-top:10px;font-size:12px;color:var(--blue-2);font-weight:700}
+  .cards.two{grid-template-columns:repeat(2,minmax(0,1fr))}
 
-/* 入口卡片 */
-.entries{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.en{display:block;background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px 20px;text-decoration:none;color:inherit;transition:.18s;cursor:pointer}
-.en:hover{border-color:var(--blue-line);box-shadow:0 4px 18px rgba(47,107,224,.08);transform:translateY(-2px)}
-.en .k{font:600 10.5px var(--mono);letter-spacing:.12em;color:#C3CCDB;text-transform:uppercase}
-.en h3{margin:8px 0 6px;font-size:16px;font-weight:650}
-.en p{margin:0;font-size:12.5px;color:#6C7889;line-height:1.6}
+  /* callout / value */
+  .callout{background:var(--blue-soft);border:1px solid var(--blue-line);border-left:4px solid var(--blue);
+    border-radius:10px;padding:18px 22px;margin:20px 0;font-size:14.5px;color:#26334A;line-height:1.9}
+  .callout b{color:var(--ink)}
+  .callout ol{margin:8px 0 0 22px}
+  .callout li{margin:4px 0}
+  .value{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}
+  .value>div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+  .value .n{font-size:12px;font-weight:800;letter-spacing:2px;color:var(--blue)}
+  .value h4{font-size:17px;margin:8px 0 6px}
+  .value p{font-size:13.5px;color:var(--muted)}
+  .honest{background:#FFF8EC;border:1px solid #F3DFB8;border-radius:10px;padding:14px 18px;
+    font-size:13.5px;color:#6A5838;margin-top:22px;line-height:1.85}
+  .honest b{color:#4A3A20}
 
-.plate{background:#fff;border:1px solid var(--line);border-radius:14px;padding:32px 28px}
+  /* course */
+  .course{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:26px;
+    background:linear-gradient(120deg,#0B1220,#172844);color:#fff;border-radius:var(--radius);padding:26px 28px}
+  .course>div{flex:1;min-width:260px}
+  .course .k{font-size:11.5px;letter-spacing:2px;font-weight:800;color:#8FB2FF}
+  .course h4{font-size:20px;margin:6px 0}
+  .course p{font-size:13.5px;color:#B9C4D4;line-height:1.8}
+  .course .btn{background:#fff;color:var(--blue-2);border-color:#fff}
+  .course .btn:hover{background:#EAF1FF}
 
-/* 依赖/流程通用 */
-.col{display:flex;flex-direction:column;align-items:center}
-.row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.nd{border:1px solid var(--line);background:#fff;border-radius:9px;padding:10px 16px;text-align:center;font:600 13px var(--mono);line-height:1.5;white-space:nowrap}
-.nd small{display:block;font:400 11.5px var(--sans);color:var(--soft);margin-top:1px}
-.nd.dash{border-style:dashed;color:#5A6779}
-.nd.blue{background:var(--blue-bg);border-color:var(--blue-line);color:#1B4BA8}
-.nd.blue small{color:#5F7FB5}
-.nd.dark{background:var(--dark);border-color:var(--dark);color:#E8F0FC}
-.nd.dark small{color:#8CA0BE}
-.nd.amber{background:#FFF7EA;border-color:#F3DFBB;color:#9C5E00}
-.nd.amber small{color:#A8762A}
-.lnk{display:flex;align-items:center;gap:10px;color:#9BA8BB;font-size:11.5px;margin:10px 0}
-.lnk::before,.lnk::after{content:'';width:48px;height:1px;background:linear-gradient(90deg,transparent,#D3DBE8)}
-.lnk::after{background:linear-gradient(90deg,#D3DBE8,transparent)}
+  /* tables */
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;font-size:14px;margin:12px 0}
+  .mod.alt table{background:var(--bg)}
+  th{background:#F0F1F3;text-align:left;padding:12px 16px;font-size:12.5px;color:var(--muted);
+    letter-spacing:.5px;border-bottom:1px solid var(--line)}
+  td{padding:12px 16px;border-bottom:1px solid var(--soft);vertical-align:top;line-height:1.75}
+  tr:last-child td{border-bottom:none}
+  td:first-child{font-weight:600;white-space:nowrap}
+  td code{font-size:12px;background:#ECEEF1;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--blue-2)}
+  .cmp td:first-child{color:var(--muted);font-weight:500;white-space:normal}
+  .cmp td:nth-child(2){color:var(--blue-2);font-weight:600}
 
-/* 两级队列 */
-.twoq{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.qbox{border:1px solid var(--line);border-radius:11px;padding:18px;background:#FBFCFE}
-.qbox h4{margin:0 0 4px;font:600 13.5px var(--mono);color:#1B4BA8}
-.qbox p{margin:0 0 14px;font-size:12px;color:var(--soft);line-height:1.5}
-.slot{border:1px solid var(--line);background:#fff;border-radius:7px;padding:8px 11px;font:500 11.5px var(--mono);color:#4A5568;display:flex;justify-content:space-between;gap:8px}
-.slot b{color:var(--ink);font-weight:600}
-.slot.act{border-color:var(--blue-line);background:var(--blue-bg)}
-.slot + .slot{margin-top:6px}
-.slot em{font-style:normal;color:#A9B4C4;font-size:10.5px}
+  /* code */
+  .codebox{position:relative;background:var(--code-bg);border-radius:12px;margin:14px 0;overflow:hidden}
+  .codebox .bar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:#0C1220;
+    border-bottom:1px solid rgba(255,255,255,.08)}
+  .codebox .bar b{font-size:11.5px;color:#93A2B8;letter-spacing:1px;font-weight:700}
+  .codebox .bar .copy{margin-left:auto;font:inherit;font-size:11.5px;color:#93A2B8;background:transparent;
+    border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:3px 10px;cursor:pointer}
+  .codebox .bar .copy:hover{color:#fff;border-color:#93A2B8}
+  pre{padding:16px 18px;overflow-x:auto;color:var(--code-ink);font-size:12.8px;line-height:1.9}
+  pre .c{color:var(--code-cm)} pre .k{color:var(--code-kw)} pre .s{color:var(--code-str)}
+  pre .n{color:var(--code-num)} pre .t{color:#8FD3B6}
+  .steps{display:grid;gap:10px}
+  .step{display:grid;grid-template-columns:36px 1fr;gap:16px;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .mod.alt .step{background:var(--bg)}
+  .step .i{width:32px;height:32px;border-radius:50%;background:var(--blue-soft);color:var(--blue);
+    border:1px solid var(--blue-line);font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center}
+  .step h4{font-size:16px;margin-bottom:4px}
+  .step p{font-size:13.5px;color:var(--muted)}
+  .step .codebox{margin:12px 0 0}
 
-/* 分层条 */
-.tiers{display:flex;flex-direction:column;gap:7px}
-.tier{display:flex;align-items:center;gap:12px}
-.tier .side-lbl{font:500 10.5px var(--mono);color:#B8C3D4;width:72px;text-align:right;letter-spacing:.04em}
-.tier .bar{flex:1;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 15px;border-radius:7px;border:1px solid var(--line);background:#fff}
-.tier .pk{font:600 12.5px var(--mono);color:#2B4E8F}
-.tier .ds{font-size:12.5px;color:#6C7889}
-.tier.l1 .bar{background:#F3F7FE;border-color:#DDE8FA}
-.tier.l2 .bar{background:#EDF2FB;border-color:#D6E2F6}
-.tier.l3 .bar{background:#E5ECF8;border-color:#CBD9F2}
-.tier.hot .bar{background:#FFF7EA;border-color:#F3DFBB}
-.tier.hot .pk{color:#9C5E00}
-.tier.l5 .bar{background:#152238;border-color:#152238}
-.tier.l5 .pk{color:#9DB8E4}.tier.l5 .ds{color:#7E93B4}
+  /* tabs */
+  .tabs{display:flex;flex-wrap:wrap;gap:7px;margin:16px 0 12px}
+  .tab{font:inherit;font-size:12.5px;padding:6px 13px;border:1px solid var(--line);border-radius:999px;
+    background:var(--card);color:var(--muted);cursor:pointer;transition:.15s}
+  .tab:hover{border-color:var(--faint);color:var(--ink)}
+  .tab.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+  #tabCode .codebox{margin:0}
+  #tabDesc{font-size:13.5px;color:var(--muted);margin-top:12px;line-height:1.85}
+  #tabDesc b{color:var(--ink)}
 
-/* 状态链 */
-.chain{display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
-.st{position:relative;flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:10px 6px;text-align:center;background:#fff}
-.st b{display:block;font:600 11.5px var(--mono)}
-.st small{display:block;font-size:10.5px;color:var(--soft);margin-top:2px;line-height:1.4}
-.st.idle{background:#FAFBFD;border-color:#E6EBF4}
-.st.idle b{color:#7A8699}
-.st.run{background:var(--blue-bg);border-color:var(--blue-line)}
-.st.run b{color:#1B4BA8}
-.st:not(:first-child)::before{content:'';position:absolute;left:-22px;top:50%;width:22px;height:1px;background:#D3DBE8}
-.st:not(:first-child)::after{content:'';position:absolute;left:-5px;top:50%;margin-top:-3px;border:3px solid transparent;border-left-color:#C3CCDB}
-.loop{margin-top:22px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:12.5px;color:#9C5E00;background:#FFF9EF;border:1px dashed #F0DCB8;border-radius:8px;padding:9px 14px}
+  /* layers */
+  .layers{display:grid;gap:10px;margin:18px 0}
+  .layer{border:1px solid var(--blue-line);border-radius:12px;background:var(--card);padding:16px 20px;
+    display:grid;grid-template-columns:180px 1fr;gap:18px;align-items:center}
+  .layer .lt{font-weight:800;font-size:16px;color:var(--blue-2)}
+  .layer .lt small{display:block;font-size:11.5px;color:var(--faint);font-weight:600;letter-spacing:1px}
+  .layer .ld{font-size:13.5px;color:var(--muted);line-height:1.85}
+  .layer .ld code{font-size:12px;color:var(--blue-2);background:var(--blue-soft);border-radius:5px;padding:1px 6px}
+  .layer .arrow{text-align:center;color:var(--faint);font-size:16px;line-height:1}
+  .mod.alt .layer{background:var(--bg)}
 
-/* 步骤流 */
-.flow{display:flex;flex-direction:column}
-.fs{display:grid;grid-template-columns:32px 1fr;gap:14px;position:relative;padding-bottom:13px}
-.fs:last-child{padding-bottom:0}
-.fs::before{content:'';position:absolute;left:15px;top:28px;bottom:0;width:1px;background:#DEE5F0}
-.fs:last-child::before{display:none}
-.fs .dot{width:31px;height:31px;border-radius:50%;border:1px solid var(--blue-line);background:var(--blue-bg);color:#1B4BA8;font:600 11px var(--mono);display:flex;align-items:center;justify-content:center;z-index:1}
-.fs .bd{border:1px solid var(--line);border-radius:9px;padding:9px 14px;background:#fff;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-.fs .bd b{font:600 12.5px var(--mono)}
-.fs .bd small{font-size:12px;color:#6C7889;line-height:1.5}
-.fs.key .dot{background:#FFF7EA;border-color:#F3DFBB;color:#9C5E00}
-.fs.end .dot{background:#EDF7F1;border-color:#C9E7D8;color:#0E7A55}
-.fs.bad .dot{background:#FDECEA;border-color:#F5C9C2;color:#B33325}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+  .chips span{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--blue-soft);
+    border:1px solid var(--blue-line);color:var(--blue-2)}
+  .foot{background:#0B1220;color:#93A2B8;padding:40px 0;font-size:13px}
+  .foot a{color:#8FB2FF}
+  .foot .row{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+  .foot .row span{margin-left:auto}
 
-/* 表格 */
-.tw{overflow-x:auto;margin:16px 0 0;border:1px solid var(--line);border-radius:10px;background:#fff}
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{text-align:left;font-weight:600;color:var(--ink);background:#FAFBFE;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;font-size:12.5px}
-td{padding:10px 14px;border-bottom:1px solid var(--line2);color:#4A5568;vertical-align:top;line-height:1.6}
-tr:last-child td{border-bottom:0}
-td:first-child{white-space:nowrap}
-td code,th code{font-size:.92em}
-
-code{font-family:var(--mono);font-size:.9em;background:#EDF1F8;color:#1B3A6B;padding:1.5px 5px;border-radius:4px;white-space:nowrap}
-pre{background:#0D1524;color:#D5DFEF;padding:18px 20px;border-radius:10px;overflow-x:auto;margin:16px 0 0;font:13px/1.85 var(--mono);border:1px solid #1B2941}
-pre code{background:none;color:inherit;padding:0;font-size:inherit;white-space:pre}
-pre .cm{color:#6B7F9C}
-
-/* 提示 */
-.note{border-left:3px solid var(--blue);background:#F4F8FF;padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0 0;font-size:13.5px;color:#4A5568;line-height:1.7}
-.note.warn{border-left-color:var(--amber);background:#FFF9EF}
-.note.danger{border-left-color:var(--red);background:#FFF5F4}
-.note.ok{border-left-color:var(--green);background:#F2FBF6}
-.note b{color:var(--ink)}
-
-/* 卡片 */
-.cards{display:grid;gap:12px;margin-top:16px}
-.cards.c2{grid-template-columns:1fr 1fr}
-.cards.c3{grid-template-columns:repeat(3,1fr)}
-.card{background:#fff;border:1px solid var(--line);border-radius:9px;padding:15px 17px}
-.card h4{margin:0 0 6px;font-size:13.5px;font-weight:650}
-.card p{margin:0;font-size:12.5px;line-height:1.65;color:#5A6779}
-.card .idx{font:600 10.5px var(--mono);color:#B8C3D4;letter-spacing:.1em;display:block;margin-bottom:5px}
-
-/* 数字 */
-.stats{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}
-.stat{flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:12px 14px;background:#FAFBFD;text-align:center}
-.stat b{display:block;font:700 21px/1.2 var(--mono);color:var(--dark);letter-spacing:-.02em}
-.stat small{display:block;font-size:10.5px;color:var(--soft);margin-top:3px;line-height:1.4}
-
-/* 标记 */
-.b{display:inline-block;padding:1px 6px;border-radius:4px;font:600 10.5px var(--mono);letter-spacing:.03em;vertical-align:1px;white-space:nowrap}
-.b.ok{background:#E4F6EE;color:#0B7A53}
-.b.no{background:#FCEAE8;color:#B33325}
-.b.wip{background:#FFF2DC;color:#9C5E00}
-.b.n{background:#EDF1F8;color:#4A5A73}
-
-.foot{padding:40px 0 0;color:#AEB8C8;font-size:12px;text-align:center;border-top:1px solid var(--line);margin-top:10px}
-
-@media (max-width:1080px){
-  .side{display:none}
-  .main{margin-left:0;padding:0 20px 80px}
-  .hero{padding:56px 0 20px}.hero h1{font-size:31px}
-  .entries,.twoq,.cards.c2,.cards.c3{grid-template-columns:1fr}
-  .tier .side-lbl{display:none}
-  .plate{padding:22px 16px}
-  .chain{gap:8px}
-  .st{flex:1 1 40%;min-width:0}
-  .st:not(:first-child)::before,.st:not(:first-child)::after{display:none}
-}
+  @media(max-width:900px){
+    .hero-stats{grid-template-columns:repeat(2,1fr)}
+    .cards,.value{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .layer{grid-template-columns:1fr}
+  }
+  @media(max-width:620px){
+    .hero{padding:60px 0 40px}.hero h1{font-size:32px}
+    .mod{padding:52px 0}.mod-head h2{font-size:25px}
+    .cards,.value,.cards.two,.hero-stats{grid-template-columns:1fr}
+    .topbar-in{gap:10px}.topbar .ext{display:none}
+    table{font-size:13px}th,td{padding:10px 12px}
+  }
 </style>
 </head>
 <body>
 
-<aside class="side">
-  <b>青竹 BLE SDK</b><em>Docs</em>
-  <nav id="viewnav">
-    <a href="?view=home" data-view="home" class="on"><i>01</i>首页</a>
-    <a href="?view=arch" data-view="arch"><i>02</i>架构全景</a>
-    <a href="?view=guide" data-view="guide"><i>03</i>接入指南</a>
-  </nav>
-  <div class="sep">本页目录</div>
-  <nav id="toc"></nav>
-  <div class="sep">External</div>
-  <nav>
-    <a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android" target="_blank" rel="noopener"><i>↗</i>源码仓库</a>
-    <a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android#readme" target="_blank" rel="noopener"><i>↗</i>完整 README</a>
-  </nav>
-</aside>
-
-<main class="main"><div class="wrap">
-
-<!-- ============ 首页 ============ -->
-<div class="view" id="view-home" data-view="home">
-
-<header class="hero">
-  <h1>青竹 BLE SDK<br><span>文档</span></h1>
-  <p>任务式 Android BLE 内核。一台设备一个任务，业务只说要对哪台设备做什么，寻人、排队、建连、重发、断开由内核完成。</p>
-  <div class="tags">
-    <span class="tag">任务驱动</span>
-    <span class="tag">两级队列</span>
-    <span class="tag">协议插件化</span>
-    <span class="tag">JSON to JSON</span>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">青竹 <span>BLE SDK</span></div>
+    <nav class="nav" id="nav">
+      <a href="#business">产品价值</a>
+      <a href="#api">API 文档</a>
+      <a href="#protocol">协议对接</a>
+      <a href="#architecture">架构设计</a>
+    </nav>
+    <a class="ext" href="https://qingzhu-ai-public.github.io/qingzhu-blue/academy/index.html" target="_blank" rel="noopener">全栈蓝牙课堂 ↗</a>
+    <a class="ext" href="https://github.com/qingzhu-ai-public/qingzhu-ble-android" target="_blank" rel="noopener">GitHub ↗</a>
   </div>
 </header>
 
-<section id="home-intro">
-  <div class="hd"><span class="no">01</span><h2>从这里开始</h2></div>
-  <p class="lead">先看结构，再看接口，最后照示例写。</p>
-  <div class="entries">
-    <a class="en" href="?view=arch" data-view="arch">
-      <span class="k">Architecture</span>
-      <h3>架构全景</h3>
-      <p>三级结构、两个队列、状态机、各场景内部流程。</p>
-    </a>
-    <a class="en" href="?view=guide" data-view="guide">
-      <span class="k">Guide</span>
-      <h3>接入指南</h3>
-      <p>从引依赖到收结果，照着步骤走一遍。</p>
-    </a>
-    <a class="en" href="#start">
-      <span class="k">Quickstart</span>
-      <h3>快速接入</h3>
-      <p>引依赖、初始化、扫描、发第一条命令。</p>
-    </a>
+<section class="hero" id="top">
+  <div class="wrap">
+    <div class="eyebrow">ANDROID · BLE · OPEN SOURCE</div>
+    <h1>一套内核，<br><span>管好所有 BLE 设备</span></h1>
+    <p class="hero-lead">以任务为中心的 Android BLE SDK。<b>一台设备就是一个任务</b>，丢进池里，扫描、寻人、连接、发送、重试、收尾全托管；不同设备的协议差异关在插件里，内核一行不改。</p>
+    <div class="cta">
+      <a class="btn" href="#api">开始接入 →</a>
+      <a class="btn ghost" href="#business">看适用场景</a>
+      <a class="btn ghost" href="#architecture">看架构设计</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hs"><b>1 行</b><span>表达一次设备操作意图</span></div>
+      <div class="hs"><b>1–7</b><span>并发连接容量，按机型体检</span></div>
+      <div class="hs"><b>恰好 1 次</b><span>每条命令的最终回调</span></div>
+      <div class="hs"><b>7 个模块</b><span>内核 / 门面 / 协议 / Demo</span></div>
+      <div class="hs"><b>Android 7.0+</b><span>minSdk 24 · compileSdk 35</span></div>
+    </div>
   </div>
 </section>
 
-<section id="home-queues">
-  <div class="hd"><span class="no">02</span><h2>两个队列，别混在一起</h2></div>
-  <p class="lead">任务池装设备，指令队列装命令。跨任务并行，任务内串行。</p>
-  <div class="plate">
-    <div class="twoq">
-      <div class="qbox">
-        <h4>任务池 QTaskPool</h4>
-        <p>装设备。无序，各自推进，互不等待。</p>
-        <div class="slot"><b>设备 A</b><em>SENDING</em></div>
-        <div class="slot"><b>设备 B</b><em>QUEUED</em></div>
-        <div class="slot"><b>设备 C</b><em>READY</em></div>
+<main>
+
+<!-- ============ 01 给决策者 ============ -->
+<section class="mod" id="business">
+  <div class="wrap">
+    <div class="mod-head">
+      <span class="no">01 / 给决策者</span>
+      <h2>不是又一个 BLE 封装，是可以直接落地的基础设施</h2>
+      <p>把 BLE 从「每个项目重写一套状态机」变成「接一次，全产品线复用」。下面按产品视角说明：能用在哪、马上怎么用、和常见做法比差在哪、为什么值得选。</p>
+    </div>
+
+    <h3 class="sec">能马上用在哪些产品</h3>
+    <p class="sec-lead">这些 App 形态差别很大，但拆到底都是「设备管理 + 指令编排 + 结果回调」——正好是这套内核做完的部分。</p>
+    <div class="cards">
+      <div class="card"><span class="tag">智能家居</span><h4>多设备连接控制</h4><p>灯、门锁、传感器同时在线，手机随时控制与查状态；长连接心跳保证页面不显示假的「已连接」。</p><div class="mini">多连接并发 · 心跳探活 · 单设备串行</div></div>
+      <div class="card"><span class="tag">设备管理</span><h4>批量配置与升级</h4><p>一串设备批量下发配置、批量 OTA；失败能定位到哪台、卡在哪一步，并一键重试失败项。</p><div class="mini">每设备队列 · stage/error · 进度快照</div></div>
+      <div class="card"><span class="tag">蓝牙网关</span><h4>云端指令转发</h4><p>与服务器保持长连接，收到云端指令后控制周边 BLE 设备；设备走远再回来能自己连上。</p><div class="mini">永久连接 · 自动重连 · 指令队列</div></div>
+      <div class="card"><span class="tag">零售 / 电子价签</span><h4>批量改价与刷图</h4><p>多面刷图、一机一密认证、大数据分包下发；进度与结果实时可观测。</p><div class="mini">多附件 · 分包传输 · 进度回调</div></div>
+      <div class="card"><span class="tag">工业 / 资产监测</span><h4>采集与断线续传</h4><p>轮询采集、设备换 MAC 仍认得是同一台、掉线能发现、回来自动续上。</p><div class="mini">stableId · 地址新鲜度 · 断线恢复</div></div>
+      <div class="card"><span class="tag">穿戴 / 健康</span><h4>单设备长连同步</h4><p>数据同步期间保持连接，每条指令结果明确、不重复回调，页面反复进出不会误断连接。</p><div class="mini">keepConnected · 恰好一次 · taskId 清理</div></div>
+    </div>
+
+    <h3 class="sec">「马上用上」具体是哪几步</h3>
+    <div class="callout">
+      <b>公开仓库提供源码模块与可直接运行的试玩 App</b>（1 个主端 + 2 个从端模拟器）。接入路径：
+      <ol>
+        <li>Gradle 引入 <code>qingzhu-company-sdk</code>（它以 <code>api</code> 方式传递 <code>qingzhu-core</code> 与两个示例协议）；</li>
+        <li>声明蓝牙 / 定位权限，Android 12+ 动态申请 <code>BLUETOOTH_SCAN</code>、<code>BLUETOOTH_CONNECT</code>；</li>
+        <li><code>init → startScan → createTask → task.send(...)</code>，四步就能发第一条指令；</li>
+        <li>要接自家设备：实现一个 <code>ProtocolPlugin</code> 注册进去，内核与业务代码都不用改。</li>
+      </ol>
+    </div>
+
+    <h3 class="sec">和常见做法比，差在哪</h3>
+    <table class="cmp">
+      <tr><th style="width:34%">常见做法 / 薄封装 SDK</th><th>青竹 BLE SDK</th></tr>
+      <tr><td>每个 App 自己写扫描 → 连接 → 分包 → 超时 → 重试的状态机</td><td>任务池托管全流程，业务只用一条 <code>QCommand</code> 表达意图</td></tr>
+      <tr><td>多台同时建连，Android BLE 栈互相撞车（133 / 排队 / 越连越慢）</td><td>建连串行闸门 + 1–7 并发容量，按机型体检给起点</td></tr>
+      <tr><td>设备换地址就重复建任务、列表里一行变两行</td><td>stableId 全链路去重 + 扫描缓存地址新鲜度，换址自动跟随</td></tr>
+      <tr><td>失败只知道「失败了」，排查靠猜</td><td>TaskState / TaskStage / ErrorCode / 进度快照，知道卡在哪一步</td></tr>
+      <tr><td>每接一种新设备，就往核心加 if/else</td><td>协议插件化：公共能力在 core，设备差异上浮为插件</td></tr>
+      <tr><td>页面反复进出，旧页面迟到的 onDestroy 把新连接断掉</td><td>新任务替换旧任务、旧意图作废，taskId 精确清理</td></tr>
+      <tr><td>超时、重试、心跳、保活各写一套，参数散落各处</td><td>统一配置中心 <code>BleSettings</code>，分层超时与可声明心跳节奏</td></tr>
+    </table>
+
+    <h3 class="sec">为什么值得选它</h3>
+    <div class="value">
+      <div><div class="n">VALUE 01</div><h4>缩短接入周期</h4><p>BLE 生命周期这套最难写对的部分已经做完；新设备接入从「重写状态机」变成「写一个协议插件」。</p></div>
+      <div><div class="n">VALUE 02</div><h4>降低线上事故</h4><p>串行建连、迟到回调治理、地址轮换、扫描假死自愈、断连恢复，都是真实项目里踩过的坑，统一收口在内核。</p></div>
+      <div><div class="n">VALUE 03</div><h4>跨产品线复用</h4><p>一个 BLE 所有者、多种协议。不同产品共享同一套扫描、连接、调度与错误模型，不再各自重复实现。</p></div>
+    </div>
+
+    <div class="course">
+      <div>
+        <div class="k">配套基础课程</div>
+        <h4>全栈蓝牙课堂</h4>
+        <p>从 BLE 基础、广播与 GATT，到 Android 实战与工程化的一套系统课程。团队新人可以先补基础，再来看这套 SDK 的架构取舍。</p>
       </div>
-      <div class="qbox">
-        <h4>指令队列 PendingIntentQueue</h4>
-        <p>装命令。先进先出，同一设备严格串行。</p>
-        <div class="slot act"><b>命令 1</b><em>执行中</em></div>
-        <div class="slot"><b>命令 2</b><em>等待</em></div>
-        <div class="slot"><b>命令 3</b><em>等待</em></div>
-      </div>
-    </div>
-    <div class="note"><b>一个任务里可以有上万条命令</b>，但一台设备同一时刻只发一条。真正的并发发生在任务之间，受连接容量限制。</div>
-  </div>
-  <p class="cap"><a href="?view=arch#s2" data-view="arch">详见 架构全景 · 第 02 节</a></p>
-</section>
-
-<section id="start">
-  <div class="hd"><span class="no">03</span><h2>发一条命令</h2></div>
-  <p class="lead">三步：拿任务、发命令、收结果。</p>
-  <div class="plate">
-    <pre><code><span class="cm">// 1. 拿任务：一台设备一个任务</span>
-QTask task = QingzhuSdk.getTask(mac);
-<span class="cm">// 没有才创建；反复进出页面请直接用 createTask，见架构图 07</span>
-if (task == null) task = QingzhuSdk.createTask(mac);
-
-<span class="cm">// 2. 发命令：每条命令恰好回调一次</span>
-task.send(
-    QCommand.builder().send("{\"action\":\"echo\"}").build(),
-    result -&gt; {
-        if (result.isSuccess()) {
-            String payload = result.payload();
-        } else {
-            TaskStage stage = result.stage();
-            String error = result.error();
-        }
-    }
-);</code></pre>
-    <div class="note"><b>判断成功只看 <code>isSuccess()</code>。</b>payload 是设备回显，成功也可能为空，不要用 payload 判成败。</div>
-  </div>
-  <p class="cap"><a href="?view=guide" data-view="guide">从引依赖到收结果，看「接入指南」</a></p>
-</section>
-
-<section id="home-numbers">
-  <div class="hd"><span class="no">04</span><h2>关键数字</h2></div>
-  <p class="lead">来自当前源码的默认值。</p>
-  <div class="plate">
-    <div class="tw">
-      <table>
-        <thead><tr><th style="width:220px">参数</th><th style="width:120px">默认值</th><th>说明</th></tr></thead>
-        <tbody>
-          <tr><td>并发连接</td><td><code>7</code></td><td>同时保有几条连接，可调</td></tr>
-          <tr><td>传输窗口</td><td><code>1</code></td><td>全局串行发送，可调</td></tr>
-          <tr><td>每设备指令队列</td><td><code>10000</code></td><td>满了返回 BUSY</td></tr>
-          <tr><td>连接等待队列</td><td>无界</td><td>请求不拒绝，按序补位</td></tr>
-          <tr><td>失败重试</td><td><code>3</code></td><td>间隔 1.5 秒</td></tr>
-          <tr><td>寻人超时</td><td><code>30 秒</code></td><td>未扫到算一次失败</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-<section id="limits">
-  <div class="hd"><span class="no">05</span><h2>已知边界</h2></div>
-  <div class="plate">
-    <div class="note danger"><b><code>send</code> 不是线程安全的。</b>MQTT 等子线程并发调用要自己串行化，否则可能出现两条命令同时发。</div>
-    <div class="note warn"><b>任务不会自动回收。</b>长期运行的服务需要定时 <code>deleteTask</code>，否则任务池只增不减。</div>
-    <div class="note warn"><b>没有设备主动上报通路。</b><code>QTask</code> 没有 listen，设备主动推送的数据暂时收不到。</div>
-    <div class="note"><b>只有 Android 实现。</b><code>BleAdapter</code> 是平台抽象，但只有一份实现。</div>
-  </div>
-</section>
-
-</div>
-
-<!-- ============ 架构全景 ============ -->
-<div class="view" id="view-arch" data-view="arch" hidden>
-
-<header class="hero">
-  <h1>青竹 BLE SDK<br><span>架构全景</span></h1>
-  <p>一台设备一个任务，任务里排命令。任务池管设备，指令队列管顺序。</p>
-  <div class="tags">
-    <span class="tag">任务驱动</span>
-    <span class="tag">两级队列</span>
-    <span class="tag">协议插件化</span>
-    <span class="tag">JSON to JSON</span>
-  </div>
-</header>
-
-<section id="s1">
-  <div class="hd"><span class="no">01</span><h2>三级结构</h2></div>
-  <p class="lead">共享资源只有一份，任务每设备一个，指令在任务内部排队。</p>
-  <div class="plate">
-    <div class="col">
-      <div class="nd dash">业务 / MQTT / 界面<small>只表达要对哪台设备做什么</small></div>
-      <div class="lnk">调用</div>
-      <div class="nd blue">QSdk 门面<small>QingzhuSdk / MinewESLSdk</small></div>
-      <div class="lnk">转发</div>
-      <div class="nd dark">QTaskPool 任务池<small>装 N 个任务，一台设备一个</small></div>
+      <a class="btn" href="https://qingzhu-ai-public.github.io/qingzhu-blue/academy/index.html" target="_blank" rel="noopener">进入课堂 ↗</a>
     </div>
 
-    <div class="tiers" style="margin-top:26px">
-      <div class="tier l3">
-        <div class="side-lbl">每设备</div>
-        <div class="bar"><span class="pk">TaskImpl 任务</span><span class="ds">状态机 + 当前命令 + 指令队列</span></div>
-      </div>
-      <div class="tier l2">
-        <div class="side-lbl">共享</div>
-        <div class="bar"><span class="pk">ConnectionPool</span><span class="ds">最多 7 条连接，无界排队，建连串行</span></div>
-      </div>
-      <div class="tier l2">
-        <div class="side-lbl"></div>
-        <div class="bar"><span class="pk">ScanEngine</span><span class="ds">扫描、识别、地址缓存</span></div>
-      </div>
-      <div class="tier l2">
-        <div class="side-lbl"></div>
-        <div class="bar"><span class="pk">传输窗口</span><span class="ds">Semaphore 默认 1，全局串行发送</span></div>
-      </div>
-      <div class="tier l2">
-        <div class="side-lbl"></div>
-        <div class="bar"><span class="pk">ActionRouter</span><span class="ds">按 protocolId 找到协议的 ActionHandler</span></div>
-      </div>
-      <div class="tier l5">
-        <div class="side-lbl">系统</div>
-        <div class="bar"><span class="pk">AndroidGattClient</span><span class="ds">真正碰 BluetoothGatt 的地方</span></div>
-      </div>
+    <div class="honest"><b>诚实边界：</b>当前公开仓库是<b>源码预览版</b>——核心状态机、任务池、连接池与两个示例协议可构建、可测试，试玩 App 可直接运行；长期稳定性、机型兼容性与多插件冲突治理仍在持续验证。自适应并发的体检 / 学习 / 持久化已实现，批量反馈回路尚未接回主链路。正式宿主 AAR 由内部工程打包，公开仓库以源码模块方式接入。</div>
+  </div>
+</section>
+
+<!-- ============ 02 API 文档 ============ -->
+<section class="mod alt" id="api">
+  <div class="wrap">
+    <div class="mod-head">
+      <span class="no">02 / 给 SDK 使用者</span>
+      <h2>从初始化到每个场景，几行代码就够</h2>
+      <p>心智模型只有一句：<b>万物皆任务</b>。任务 = 一台设备 + 一条可选命令；内核负责寻人、排队、连接、发送、失败重试与收尾。以下示例均对应仓库中的公开 API。</p>
+    </div>
+
+    <h3 class="sec">接入准备</h3>
+    <div class="codebox">
+      <div class="bar"><b>settings.gradle / build.gradle</b><button class="copy" type="button">复制</button></div>
+<pre><span class="c">// settings.gradle：引入源码模块</span>
+include <span class="s">':qingzhu-core'</span>, <span class="s">':qingzhu-company-sdk'</span>,
+        <span class="s">':qingzhu-protocol-generic'</span>, <span class="s">':qingzhu-protocol-eddystone'</span>
+
+<span class="c">// app/build.gradle：只需依赖门面，内核与协议由它传递暴露</span>
+dependencies { implementation project(<span class="s">':qingzhu-company-sdk'</span>) }
+
+<span class="c">// AndroidManifest.xml（Android 12+ 还需动态申请）</span>
+BLUETOOTH_SCAN · BLUETOOTH_CONNECT · ACCESS_FINE_LOCATION · WAKE_LOCK</pre>
+    </div>
+
+    <h3 class="sec">五步发第一条指令</h3>
+    <div class="steps">
+      <div class="step"><div class="i">1</div><div>
+        <h4>初始化</h4><p>幂等；注入内核并注册两个开源示例协议。要换成自家协议，注册自己的插件即可。</p>
+        <div class="codebox"><div class="bar"><b>Java</b><button class="copy" type="button">复制</button></div>
+<pre><span class="t">QingzhuSdk</span>.init(context.getApplicationContext());</pre></div>
+      </div></div>
+      <div class="step"><div class="i">2</div><div>
+        <h4>扫描（按 stableId 去重，每秒批量回调）</h4><p>扫描常开；任务需要寻人时内核会自动拉起。退出界面或登出时由业务调用 <code>stopScan()</code>。</p>
+        <div class="codebox"><div class="bar"><b>Java</b><button class="copy" type="button">复制</button></div>
+<pre><span class="t">QingzhuSdk</span>.startScan(devices -&gt; showList(devices));
+<span class="t">QingzhuSdk</span>.setScanStateListener(scanning -&gt; updateIndicator(scanning));
+<span class="c">// 需要过滤时：startScan(ScanOptions.builder()...build(), listener)</span></pre></div>
+      </div></div>
+      <div class="step"><div class="i">3</div><div>
+        <h4>建任务 / 取任务</h4><p><code>createTask</code> 会替换该设备已有任务；多页面共享用 <code>getTask</code> 复用，避免误删后来者。</p>
+        <div class="codebox"><div class="bar"><b>Java</b><button class="copy" type="button">复制</button></div>
+<pre><span class="t">QTask</span> task = <span class="t">QingzhuSdk</span>.createTask(mac);
+task.setConnectParams(<span class="t">Collections</span>.singletonMap(<span class="s">"activeKey"</span>, key));  <span class="c">// 连接参数属于任务</span></pre></div>
+      </div></div>
+      <div class="step"><div class="i">4</div><div>
+        <h4>表达意图并发送</h4><p>一条 <code>QCommand</code> 说清「这次干什么」；连、发、断、重试由任务池跑完。回调在主线程，每条命令恰好一次。</p>
+        <div class="codebox"><div class="bar"><b>Java</b><button class="copy" type="button">复制</button></div>
+<pre><span class="t">QCommand</span> cmd = <span class="t">QCommand</span>.builder()
+        .send(<span class="s">"{\"action\":\"echo\"}"</span>)
+        .disconnectAfter()          <span class="c">// 短连接：发完自动断</span>
+        .build();
+task.send(cmd, result -&gt; {
+    <span class="k">if</span> (result.isSuccess()) showOk(result.payload());
+    <span class="k">else</span> showError(result.stage(), result.code(), result.error());
+});</pre></div>
+      </div></div>
+      <div class="step"><div class="i">5</div><div>
+        <h4>观察任务 / 清理</h4><p>注册后立即推一次快照；任务自带状态、进度、已发字节、错误。页面销毁时按 mac 清理，订阅随 owner 自动取消。</p>
+        <div class="codebox"><div class="bar"><b>Java</b><button class="copy" type="button">复制</button></div>
+<pre><span class="t">Subscription</span> sub = <span class="t">QingzhuSdk</span>.observeAll(owner,
+        snapshots -&gt; render(snapshots));   <span class="c">// 不可变快照列表</span>
+
+<span class="t">QingzhuSdk</span>.deleteTask(mac);             <span class="c">// 取消 + 断开 + 移出任务池</span></pre></div>
+      </div></div>
+    </div>
+
+    <h3 class="sec">场景速查：点一下看写法</h3>
+    <p class="sec-lead">同一个 <code>QCommand.builder()</code>，加减几个方法就是不同命令；连接参数单独放在任务上。</p>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-i="0" type="button">短连接发数据</button>
+      <button class="tab" data-i="1" type="button">连接并保持</button>
+      <button class="tab" data-i="2" type="button">多附件 / OTA</button>
+      <button class="tab" data-i="3" type="button">批量下发</button>
+      <button class="tab" data-i="4" type="button">断线自动重连</button>
+      <button class="tab" data-i="5" type="button">全局配置</button>
+    </div>
+    <div id="tabCode"></div>
+    <div id="tabDesc"></div>
+
+    <h3 class="sec">结果模型：失败也说清楚卡在哪</h3>
+    <div class="chips">
+      <span>TaskState：UNKNOWN · READY · SEARCHING · QUEUED · CONNECTING · CONNECTED · SENDING</span>
+      <span>TaskStage：SEARCH · CONNECT · SEND · TIMEOUT · CANCEL · DELETE · BUSY · CLOSED</span>
+      <span>TaskOutcome：SUCCEEDED · CONNECT_FAILED · OPERATION_FAILED · CANCELLED</span>
+      <span>ErrorCode：1102 超时 · 1201 协议未注册 · 1301~1306 扫描类</span>
+    </div>
+    <div class="callout"><b>为什么简洁：</b>以前要在 Activity 里维护连接状态、定时器、重试计数、分包队列和一堆回调分支；现在业务只写「给谁、发什么」，<b>状态、顺序、资源由任务池唯一拥有</b>。快速反复进出页面时，新任务替换旧任务、旧意图作废，也不会出现旧页面迟到的 <code>onDestroy</code> 把新连接断掉。</div>
+  </div>
+</section>
+
+<!-- ============ 03 协议对接 ============ -->
+<section class="mod" id="protocol">
+  <div class="wrap">
+    <div class="mod-head">
+      <span class="no">03 / 给 SDK 开发者</span>
+      <h2>接入自家设备协议，只写一个插件</h2>
+      <p>内核只认识 <code>ProtocolPlugin</code> 这一种「协议形状」。把自家设备的识别方式、连接准备、收发格式告诉内核，扫描、连接、调度、重试、错误模型全部复用，不需要改内核或门面。</p>
+    </div>
+
+    <h3 class="sec">插件要实现什么</h3>
+    <table>
+      <tr><th style="width:30%">能力</th><th style="width:16%">必需</th><th>作用</th></tr>
+      <tr><td><code>protocolType()</code> / <code>recognizer()</code></td><td>必需</td><td>协议唯一 id 与广播识别器；扫描按注册顺序问协议，第一个认领者解析</td></tr>
+      <tr><td><code>identityKey()</code></td><td>建议</td><td>声明身份字段，stableId 由内核统一分配，换 MAC 仍认得同一台</td></tr>
+      <tr><td><code>beforeConnect()</code></td><td>可选</td><td>连接前钩子：重寻址、取密钥、握手；完成后调 <code>onReady</code></td></tr>
+      <tr><td><code>onGattReady()</code></td><td>可选</td><td>业务准备：找特征、协商 MTU、使能通知、认证</td></tr>
+      <tr><td><code>connectSteps()</code></td><td>可选</td><td>自定义连接步骤；返回 null 走内核默认流程</td></tr>
+      <tr><td><code>heartbeatCommand()</code> / <code>heartbeatConfig()</code></td><td>可选</td><td>声明心跳指令与协议级节奏；返回 null 即零开销不做心跳</td></tr>
+      <tr><td><code>scanConfig()</code> / <code>scanManufacturerIds()</code></td><td>可选</td><td>系统扫描参数与硬件过滤下沉；全部协议都声明厂商 ID 时才下沉</td></tr>
+      <tr><td><code>install()</code></td><td>建议</td><td>装配钩子：把自己的 <code>ActionHandler</code> 注册进路由</td></tr>
+      <tr><td><code>configurableParams()</code></td><td>可选</td><td>只声明可配项，不赋值；取值权留给上层 SDK</td></tr>
+    </table>
+
+    <h3 class="sec">对接流程</h3>
+    <div class="callout">
+      <ol>
+        <li>写 <code>Recognizer</code>：从广播里认出自家设备，并解析出身份 metadata；</li>
+        <li>写 <code>ActionHandler</code>：把业务 JSON + 字节附件翻译成设备帧，解析应答并返回 <code>JsonResponse</code>；</li>
+        <li>按设备需要补 <code>beforeConnect</code> / <code>onGattReady</code>（认证、MTU、通知）；</li>
+        <li>实现 <code>ProtocolPlugin</code>，在 <code>install()</code> 里注册 Handler；</li>
+        <li>初始化后 <code>QingzhuSdk.registerProtocol(new MyProtocolPlugin())</code>；</li>
+        <li>用 <code>QingzhuSdk.getProtocols()</code> 确认注册成功，即可用统一的 <code>task.send(json)</code> 发指令。</li>
+      </ol>
+    </div>
+    <div class="codebox">
+      <div class="bar"><b>Java · 注册自己的协议</b><button class="copy" type="button">复制</button></div>
+<pre><span class="t">QingzhuSdk</span>.init(context);
+<span class="t">QingzhuSdk</span>.registerProtocol(<span class="k">new</span> <span class="t">MyProtocolPlugin</span>());  <span class="c">// 幂等，不改内核</span>
+
+<span class="c">// 业务代码始终不变：JSON 进、JSON 出，协议差异关在插件里</span>
+<span class="t">QTask</span> task = <span class="t">QingzhuSdk</span>.createTask(mac);
+task.send(<span class="t">QCommand</span>.builder().send(<span class="s">"{\"action\":\"setConfig\"}"</span>).build(), r -&gt; handle(r));</pre>
+    </div>
+
+    <h3 class="sec">路由与失败语义</h3>
+    <div class="cards two">
+      <div class="card"><span class="tag">JSON → JSON</span><h4>内核不解析业务 JSON</h4><p>发送链路经 <code>TaskScheduler</code> 按 mac 串行进入 <code>ActionRouter</code>，按 protocolId 找到对应 <code>ActionHandler</code>；结果统一以 <code>JsonResponse</code> 返回。core 不认识业务语义，也不预设消息格式。</p></div>
+      <div class="card"><span class="tag">明确的失败</span><h4>不会静默成功</h4><p>已连上但 Handler 未注册，返回 <code>PROTOCOL_NOT_FOUND = 1201</code>；整个协议插件不在包里，则广播无人认领，最终以 30s 寻人超时失败。两种都带 stage / error，可直接定位。</p></div>
+    </div>
+    <p class="sec-lead" style="margin-top:16px">仓库内已有两个可直接参考的实现：<code>GenericProtocolPlugin</code>（Service Data 0xFFE0，echo / OTA / 心跳）与 <code>EddystoneProtocolPlugin</code>（0xFEAA UID / URL / TLM）。</p>
+  </div>
+</section>
+
+<!-- ============ 04 架构设计 ============ -->
+<section class="mod alt" id="architecture">
+  <div class="wrap">
+    <div class="mod-head">
+      <span class="no">04 / 给架构研究者</span>
+      <h2>总体架构与底层机制</h2>
+      <p>这一节只讲设计，不贴实现代码。核心前提一句话：<b>BLE 资源在一个进程里是共享的，必须有明确的所有者</b>；否则任何调度策略都无法生效。</p>
+    </div>
+
+    <h3 class="sec">总体分层</h3>
+    <div class="layers">
+      <div class="layer"><div class="lt">门面层<small>QingzhuSdk / QSdk</small></div><div class="ld">唯一对外入口，直接暴露内核类型（<code>QDevice</code> / <code>QTask</code> / <code>QCommand</code>）；负责初始化、协议装配、扫描订阅、任务创建与调度旋钮。不做白标包装。</div></div>
+      <div class="arrow">↓</div>
+      <div class="layer"><div class="lt">内核层<small>QTaskPool · ConnectionPool · ScanEngine · TaskScheduler</small></div><div class="ld">协议无关的状态与资源所有者：任务池管「一台设备一个任务 + 意图队列」，连接池管「同时连几台 + 建连闸门」，扫描引擎管「识别 → 去重 → 缓存」，调度器保证同一 mac 串行。</div></div>
+      <div class="arrow">↓</div>
+      <div class="layer"><div class="lt">平台层<small>BleAdapter · AndroidBleAdapter · AndroidBleScanner · AndroidGattClient</small></div><div class="ld">把内核语义翻译成 Android 能力。平台接口只约定「扫描 / 连接 / 发数据」三件事；唯一触碰 <code>BluetoothGatt</code> 的地方在平台实现里，便于替换与测试。</div></div>
+      <div class="arrow">↓</div>
+      <div class="layer"><div class="lt">协议插件层<small>ProtocolPlugin · ProtocolRegistry · ActionRouter</small></div><div class="ld">设备差异上浮到插件：识别广播、连接前握手、MTU/通知、心跳、业务帧翻译。内核按 protocolId 路由，新增设备不改内核。</div></div>
+    </div>
+
+    <h3 class="sec">六个核心机制</h3>
+    <div class="cards">
+      <div class="card"><span class="tag">01 任务池</span><h4>一设备一任务</h4><p>任务 = 设备 + 可选命令；命令进有界 FIFO 意图队列，状态在 UNKNOWN / READY 与 SEARCHING → QUEUED → CONNECTING → CONNECTED → SENDING 之间流转。所有终态收口到一处，保证每条命令恰好回调一次。</p></div>
+      <div class="card"><span class="tag">02 连接池</span><h4>串行进门，池化管理</h4><p>并发容量 1–7，建连走全局串行闸门，避免 Android BLE 栈同时建连互相撞车；连上之后各任务并行推进。容量起点按机型体检给出，支持手动接管。</p></div>
+      <div class="card"><span class="tag">03 身份与缓存</span><h4>stableId 全链路去重</h4><p>协议声明身份字段，扫描引擎生成稳定 id；扫描缓存按它组织、跨换址只留最新地址。连接前以「地址新鲜度」为唯一闸门，换址自动跟随，不重复建任务。</p></div>
+      <div class="card"><span class="tag">04 扫描引擎</span><h4>识别、去重、自愈</h4><p>逐条识别并实时更新缓存，按秒批量上报；看门狗应对零广播、启动限流避开系统风控，蓝牙开关与亮屏事件自动恢复扫描，离开范围只置灰不删快照。</p></div>
+      <div class="card"><span class="tag">05 超时与重试</span><h4>分层，不互相打架</h4><p>连接回调兜底、连接流程步骤超时、单条命令应答超时、大块传输停滞检测各管一层；优先级为单条命令 &gt; 连接级参数 &gt; 全局配置 &gt; 默认值。失败带 stage / error，重试间隔与退避统一。</p></div>
+      <div class="card"><span class="tag">06 生命周期治理</span><h4>迟到回调与资源回收</h4><p>取消、断开、删除三种语义严格区分；删除任务会作废排队意图、递增发送代次让迟到回调失效，并回收仍占用的链路。心跳探活与永久重连复用同一套收尾流程。</p></div>
+    </div>
+
+    <h3 class="sec">关键设计取舍</h3>
+    <table>
+      <tr><th style="width:32%">取舍</th><th>为什么这样设计</th></tr>
+      <tr><td>连接参数属于任务，不属于命令</td><td>「这台设备怎么连」是设备级信息；命令只描述「这次干什么」。core 只承载、不翻译，由协议在连接前钩子读取。</td></tr>
+      <tr><td>扫描常开，不因建连暂停</td><td>扫描缓存要求逐条实时更新，连接池的重连轮询依赖新鲜地址。射频竞争用「建连串行闸门 + 传输窗口」治理，而不是停扫描。</td></tr>
+      <tr><td>建连串行、传输并行</td><td>同时建连会让 BLE 栈不稳定、批量反而变慢；连上之后各设备各发各的，互不等待。</td></tr>
+      <tr><td>命令结果恰好回调一次</td><td>成功、失败、取消、删除、超时、拒收都从同一个终态收口，用原子完成标记挡住重复回调，业务不用自己防「回调两次」。</td></tr>
+      <tr><td>协议按运行时注册</td><td>公开仓库以源码模块编译期依赖 + 运行时 <code>ProtocolRegistry.register</code> 装配；插件声明可配项但不赋值，取值权留给上层。</td></tr>
+      <tr><td>大数据按「停滞」判超时</td><td>刷图 / OTA 数据量差异极大，按总时长容易误杀；有进展就续命，停滞才判失败，并配合 WakeLock 与写入窗口保序。</td></tr>
+      <tr><td>可观测优先</td><td>任务自带状态、进度、已发/总字节、结果与失败阶段；配置中心可列出全部可配项，便于诊断与生成配置页。</td></tr>
+    </table>
+    <div class="callout"><b>延伸阅读：</b>仓库内还有更细的 <a href="architecture.html">架构全景</a> 与 <a href="api.html">API 速查</a>；<a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android" target="_blank" rel="noopener">README</a> 里有完整接入指南、边界说明与试玩方式。</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="row">
+      <a href="https://github.com/qingzhu-ai-public/qingzhu-ble-android" target="_blank" rel="noopener">GitHub 源码 ↗</a>
+      <a href="https://qingzhu-ai-public.github.io/qingzhu-blue/academy/index.html" target="_blank" rel="noopener">全栈蓝牙课堂 ↗</a>
+      <a href="architecture.html">架构全景</a>
+      <a href="api.html">API 速查</a>
+      <span>青竹 BLE SDK · 以任务为中心的 Android BLE 内核 · 源码预览版</span>
     </div>
   </div>
-  <p class="cap">设备再多，中间四项也只有一份</p>
-</section>
-
-<section id="s2">
-  <div class="hd"><span class="no">02</span><h2>两个队列，别混在一起</h2></div>
-  <p class="lead">任务池是集合，不是队列；真正的队列在任务内部。</p>
-  <div class="plate">
-    <div class="twoq">
-      <div class="qbox">
-        <h4>任务池 QTaskPool</h4>
-        <p>装设备。无序，各自推进，互不等待。</p>
-        <div class="slot"><b>设备 A</b><em>SENDING</em></div>
-        <div class="slot"><b>设备 B</b><em>QUEUED</em></div>
-        <div class="slot"><b>设备 C</b><em>READY</em></div>
-        <div class="slot"><b>设备 D</b><em>SEARCHING</em></div>
-      </div>
-      <div class="qbox">
-        <h4>指令队列 PendingIntentQueue</h4>
-        <p>装命令。先进先出，同一设备严格串行。</p>
-        <div class="slot act"><b>命令 1</b><em>执行中</em></div>
-        <div class="slot"><b>命令 2</b><em>等待</em></div>
-        <div class="slot"><b>命令 3</b><em>等待</em></div>
-        <div class="slot"><b>…</b><em>默认上限 10000</em></div>
-      </div>
-    </div>
-    <div class="note"><b>关键：</b>一个任务里可以有 10000 条命令，但一台设备同一时刻只发一条。跨任务才可能并发（受 7 条连接和传输窗口限制）。</div>
-  </div>
-  <p class="cap">任务之间并行推进，任务内部串行执行</p>
-</section>
-
-<section id="s3">
-  <div class="hd"><span class="no">03</span><h2>任务状态机</h2></div>
-  <p class="lead">状态是任务自己的，另一台设备有另一条轨迹。</p>
-  <div class="plate">
-    <div class="chain">
-      <div class="st idle"><b>UNKNOWN</b><small>只有 mac</small></div>
-      <div class="st idle"><b>READY</b><small>有设备未连</small></div>
-      <div class="st run"><b>QUEUED</b><small>等窗口/重试</small></div>
-      <div class="st run"><b>CONNECTING</b><small>建连中</small></div>
-      <div class="st run"><b>CONNECTED</b><small>已连接</small></div>
-      <div class="st run"><b>SENDING</b><small>发数据</small></div>
-    </div>
-    <div class="loop"><span>连接失败 / 发送失败 / 寻人超时</span><b>→ QUEUED，1.5 秒</b><span>最多重试 3 次</span></div>
-  </div>
-  <p class="cap">没有 FAILED 状态，失败后回到 READY 或 UNKNOWN；失败阶段看 TaskStage</p>
-</section>
-
-<section id="s4">
-  <div class="hd"><span class="no">04</span><h2>一条指令进来，只有四种去向</h2></div>
-  <p class="lead">前三件事都是确定的，只有最后一种会丢指令。</p>
-  <div class="plate">
-    <div class="tw">
-      <table>
-        <thead><tr><th style="width:170px">任务当前状态</th><th>新指令的结局</th><th style="width:130px">是否丢</th></tr></thead>
-        <tbody>
-          <tr><td>已被删除</td><td>立即回调 <code>CLOSED</code></td><td><span class="b no">丢</span></td></tr>
-          <tr><td>空闲</td><td>立即执行，状态往前推</td><td><span class="b ok">不丢</span></td></tr>
-          <tr><td>忙碌</td><td>进指令队列，等前一条完成</td><td><span class="b ok">不丢</span></td></tr>
-          <tr><td>队列已满</td><td>立即回调 <code>BUSY</code></td><td><span class="b no">丢</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="note ok"><b>队列上限已从 8 调到 10000。</b>正常业务下 <code>BUSY</code> 几乎不会再出现，剩下唯一会丢的情况是任务已被删除。</div>
-  </div>
-  <p class="cap">队列只影响等待，不影响顺序</p>
-</section>
-
-<section id="s5">
-  <div class="hd"><span class="no">05</span><h2>场景一：单个设备配置</h2></div>
-  <p class="lead">内核里只多了一个任务、一次建连。</p>
-  <div class="plate">
-    <div class="flow">
-      <div class="fs"><div class="dot">01</div><div class="bd"><b>getTask(mac)</b><small>没有才 createTask，拿到任务句柄</small></div></div>
-      <div class="fs"><div class="dot">02</div><div class="bd"><b>send(cmd, cb)</b><small>任务空闲，直接执行</small></div></div>
-      <div class="fs key"><div class="dot">03</div><div class="bd"><b>ConnectionPool</b><small>申请一条连接，闸门放行后建连</small></div></div>
-      <div class="fs"><div class="dot">04</div><div class="bd"><b>传输窗口</b><small>拿到许可，写入特征值</small></div></div>
-      <div class="fs end"><div class="dot">05</div><div class="bd"><b>TaskResult</b><small>回调主线程，成功就退出页面</small></div></div>
-    </div>
-    <div class="stats">
-      <div class="stat"><b>1</b><small>任务</small></div>
-      <div class="stat"><b>1</b><small>连接</small></div>
-      <div class="stat"><b>1</b><small>指令队列</small></div>
-    </div>
-  </div>
-  <p class="cap">退出页面别急着 deleteTask，下次进来还要用</p>
-</section>
-
-<section id="s6">
-  <div class="hd"><span class="no">06</span><h2>场景二：批量配置</h2></div>
-  <p class="lead">N 台就是 N 个任务，一台失败不影响其他。</p>
-  <div class="plate">
-    <div class="flow">
-      <div class="fs"><div class="dot">01</div><div class="bd"><b>去重</b><small>按 MAC 转大写去重，total 用它算</small></div></div>
-      <div class="fs"><div class="dot">02</div><div class="bd"><b>循环 send</b><small>每台 getTask，没有才 createTask</small></div></div>
-      <div class="fs key"><div class="dot">03</div><div class="bd"><b>连接池排队</b><small>7 条并发，其余进无界队列等槽位</small></div></div>
-      <div class="fs"><div class="dot">04</div><div class="bd"><b>逐个回调</b><small>主线程，计数 done == total</small></div></div>
-      <div class="fs end"><div class="dot">05</div><div class="bd"><b>全部结束</b><small>汇总成功与失败，再退出</small></div></div>
-    </div>
-    <div class="note warn"><b>必须先去重。</b>重复项会让同一台设备被配多次或任务被反复替换，且 <code>total</code> 与回调次数对不上。</div>
-  </div>
-  <p class="cap">100 台约等于 100 除以 7，再乘单台耗时</p>
-</section>
-
-<section id="s7">
-  <div class="hd"><span class="no">07</span><h2>重复设备，与反复重进页面</h2></div>
-  <p class="lead">两件事结论相反：重复项要合并，重进页面要换新任务。</p>
-  <div class="plate">
-    <div class="twoq">
-      <div class="qbox">
-        <h4>重复 MAC：用 getTask</h4>
-        <p>同一个任务，指令进队列，全部执行。</p>
-        <div class="slot act"><b>命令 1</b><em>执行中</em></div>
-        <div class="slot"><b>命令 2</b><em>排队</em></div>
-        <div class="slot"><b>命令 3</b><em>排队</em></div>
-      </div>
-      <div class="qbox">
-        <h4>重复 MAC：用 createTask</h4>
-        <p>每次换任务，前面被删，只留最后一条。</p>
-        <div class="slot"><b>任务 1</b><em>已删</em></div>
-        <div class="slot"><b>任务 2</b><em>已删</em></div>
-        <div class="slot act"><b>任务 3</b><em>执行中</em></div>
-      </div>
-    </div>
-    <div class="note danger"><b>重进页面是例外，必须用 createTask。</b>Android 销毁页面可能晚于新页面启动。旧页面清理的是自己那个 taskId，新任务 id 不同，才不会被误删。用 getTask 复用，旧页面一清理就断了新页面的连接。</div>
-    <div class="note"><b>配套写法：</b>清理时带 taskId，只删 id 匹配的那个。</div>
-  </div>
-  <p class="cap">同一页面内连续配置用 getTask，反复进出页面用 createTask</p>
-</section>
-
-<section id="s8">
-  <div class="hd"><span class="no">08</span><h2>场景四：网关持续下发</h2></div>
-  <p class="lead">MQTT 随时来指令，一个任务不断接。</p>
-  <div class="plate">
-    <div class="flow">
-      <div class="fs"><div class="dot">01</div><div class="bd"><b>MQTT 到达</b><small>子线程，不能直接调 send</small></div></div>
-      <div class="fs key"><div class="dot">02</div><div class="bd"><b>投递到主线程</b><small>保证 send 串行，避免两条指令同时发</small></div></div>
-      <div class="fs"><div class="dot">03</div><div class="bd"><b>getTask / createTask</b><small>设备已有任务就复用</small></div></div>
-      <div class="fs"><div class="dot">04</div><div class="bd"><b>send</b><small>进队列或立即执行，回调上报结果</small></div></div>
-      <div class="fs end"><div class="dot">05</div><div class="bd"><b>定时回收</b><small>空闲任务 deleteTask，防止只增不减</small></div></div>
-    </div>
-    <div class="note danger"><b>代码现状：<code>execute</code> 内部没有锁。</b>并发调用 <code>send</code> 可能都读到空闲，导致两条指令同时发、回包串在一起。必须由调用方串行化（统一投递主线程）。</div>
-    <div class="note warn"><b>任务不会自动回收。</b>每台设备建过的任务会一直留在池里，每次状态变化都要遍历全部任务生成快照，越跑越慢。</div>
-  </div>
-  <p class="cap">队列已够大，串行化和回收要自己保证</p>
-</section>
-
-<section id="s9">
-  <div class="hd"><span class="no">09</span><h2>取消与删除</h2></div>
-  <p class="lead">cancel 是停，delete 是换。不是同一个对象的两档冷热。</p>
-  <div class="plate">
-    <div class="tw">
-      <table>
-        <thead><tr><th style="width:150px">维度</th><th>cancel</th><th>delete</th></tr></thead>
-        <tbody>
-          <tr><td>任务对象</td><td>保留，id 不变</td><td>移除，下次是新 id</td></tr>
-          <tr><td>已发现的设备</td><td>保留</td><td>随任务一起丢</td></tr>
-          <tr><td>链路</td><td>回到操作开始前</td><td>一定断开</td></tr>
-          <tr><td>未完成指令</td><td>回调 <code>CANCEL</code></td><td>回调 <code>DELETE</code></td></tr>
-          <tr><td>观察者</td><td>仍然有效</td><td>一并清空</td></tr>
-          <tr><td>下次再发</td><td>直接 send</td><td>先 createTask</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="note"><b>两个细节：</b>cancel 对空闲任务直接返回，什么都不做；delete 不挑状态，空闲也删，连着也会断开。</div>
-  </div>
-  <p class="cap">差在寻人和建连：cancel 保留设备信息，delete 只剩一个 MAC</p>
-</section>
-
-<section id="s10">
-  <div class="hd"><span class="no">10</span><h2>数字与边界</h2></div>
-  <div class="plate">
-    <div class="stats">
-      <div class="stat"><b>7</b><small>并发连接</small></div>
-      <div class="stat"><b>1</b><small>传输窗口</small></div>
-      <div class="stat"><b>10000</b><small>每设备指令队列</small></div>
-      <div class="stat"><b>∞</b><small>连接等待队列</small></div>
-      <div class="stat"><b>3</b><small>失败重试</small></div>
-    </div>
-    <div class="tw">
-      <table>
-        <thead><tr><th style="width:260px">边界</th><th style="width:110px">状态</th><th>说明</th></tr></thead>
-        <tbody>
-          <tr><td><code>send</code> 线程安全</td><td><span class="b no">需调用方保证</span></td><td>内部无锁，并发调用可能串包</td></tr>
-          <tr><td>任务自动回收</td><td><span class="b no">未提供</span></td><td>需定时 deleteTask</td></tr>
-          <tr><td>状态通知开销</td><td><span class="b wip">O(n)</span></td><td>每次变化生成全量快照，上千任务会卡</td></tr>
-          <tr><td>排队超时</td><td><span class="b wip">无</span></td><td>连接队列里的请求要等前面全部完成</td></tr>
-          <tr><td>设备主动上报</td><td><span class="b no">未实现</span></td><td><code>QTask</code> 没有 listen</td></tr>
-          <tr><td>非 Android 平台</td><td><span class="b n">仅设计</span></td><td>BleAdapter 是抽象接口，只有一份实现</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <p class="cap">数字来自当前源码：QTaskPool 与 ConnectionPool 的默认值</p>
-</section>
-
-</div>
-
-<!-- ============ 接入指南 ============ -->
-<div class="view" id="view-guide" data-view="guide" hidden>
-
-<header class="hero">
-  <h1>接入指南<br><span>照着做就能跑</span></h1>
-  <p>从引依赖到收结果，按步骤走一遍。代码全部来自当前源码与试玩 App，可直接复制。</p>
-  <div class="tags">
-    <span class="tag">12 步</span>
-    <span class="tag">Java 示例</span>
-    <span class="tag">单设备 / 批量 / 网关</span>
-  </div>
-</header>
-
-<section id="g-flow">
-  <div class="hd"><span class="no">00</span><h2>整体流程</h2></div>
-  <p class="lead">六步走完，第一条命令就发出去了。</p>
-  <div class="plate">
-    <div class="flow">
-      <div class="fs"><div class="dot">01</div><div class="bd"><b>添加依赖</b><small>引入 qingzhu-company-sdk</small></div></div>
-      <div class="fs"><div class="dot">02</div><div class="bd"><b>配置权限</b><small>清单声明 + 运行时申请</small></div></div>
-      <div class="fs"><div class="dot">03</div><div class="bd"><b>初始化</b><small>Application 里调一次 init</small></div></div>
-      <div class="fs"><div class="dot">04</div><div class="bd"><b>扫描</b><small>拿到设备或直接拿 MAC</small></div></div>
-      <div class="fs key"><div class="dot">05</div><div class="bd"><b>创建任务</b><small>一台设备一个 QTask</small></div></div>
-      <div class="fs end"><div class="dot">06</div><div class="bd"><b>发命令 / 收结果</b><small>SDK 负责寻人、连接、重发、断开</small></div></div>
-    </div>
-  </div>
-</section>
-
-<section id="g-dep">
-  <div class="hd"><span class="no">01</span><h2>添加依赖</h2></div>
-  <p class="lead">当前公开仓库提供源码模块接入。</p>
-  <div class="plate">
-    <pre><code><span class="cm">// settings.gradle</span>
-include ':qingzhu-core'
-include ':qingzhu-company-sdk'
-include ':qingzhu-protocol-generic'
-include ':qingzhu-protocol-eddystone'
-
-<span class="cm">// app/build.gradle</span>
-dependencies {
-    implementation project(':qingzhu-company-sdk')
-}</code></pre>
-    <div class="note"><b>业务只依赖门面。</b><code>qingzhu-company-sdk</code> 是唯一源码门面；宿主 AAR 由内部工程打包，不在公开仓库发布。</div>
-  </div>
-</section>
-
-<section id="g-perm">
-  <div class="hd"><span class="no">02</span><h2>配置权限</h2></div>
-  <p class="lead">Android 12 起要动态申请蓝牙权限；11 及以下还要开定位。</p>
-  <div class="plate">
-    <pre><code><span class="cm">&lt;!-- AndroidManifest.xml --&gt;</span>
-&lt;uses-permission android:name="android.permission.BLUETOOTH_SCAN" /&gt;
-&lt;uses-permission android:name="android.permission.BLUETOOTH_CONNECT" /&gt;
-&lt;uses-permission android:name="android.permission.BLUETOOTH"
-    android:maxSdkVersion="30" /&gt;
-&lt;uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
-    android:maxSdkVersion="30" /&gt;
-&lt;uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /&gt;
-&lt;uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" /&gt;</code></pre>
-    <div class="note warn"><b>先申请权限再扫描。</b>Android 12+ 申请 <code>BLUETOOTH_SCAN</code> 和 <code>BLUETOOTH_CONNECT</code>；Android 11- 还需要定位权限，并且系统定位开关要打开。</div>
-  </div>
-</section>
-
-<section id="g-init">
-  <div class="hd"><span class="no">03</span><h2>初始化</h2></div>
-  <p class="lead">在 Application 里调一次，重复调用幂等。</p>
-  <div class="plate">
-    <pre><code>public class App extends Application {
-    @Override public void onCreate() {
-        super.onCreate();
-        QingzhuSdk.init(this);
-    }
-}</code></pre>
-    <div class="note"><code>init()</code> 会初始化内核，并注册 Generic、Eddystone 两个开源协议。之后可以随时用 <code>registerProtocol()</code> 追加自己的协议。</div>
-  </div>
-</section>
-
-<section id="g-scan">
-  <div class="hd"><span class="no">04</span><h2>扫描设备</h2></div>
-  <p class="lead">拿到设备对象，或者只记下 MAC 也行。不先扫描直接发命令也可以。</p>
-  <div class="plate">
-    <pre><code>QingzhuSdk.startScan(new QSdk.ScanListener() {
-    @Override public void onDevices(List&lt;QDevice&gt; devices) {
-        for (QDevice device : devices) {
-            String mac = device.getMac();
-            String stableId = device.getStableId();
-            String name = device.getName();
-        }
-    }
-    @Override public void onScanFailed(int code, String msg) { }
-    @Override public void onScanStopped(List&lt;QDevice&gt; devices) { }
-});</code></pre>
-    <pre><code><span class="cm">// 带条件扫描；过滤只影响 UI 回调，不影响任务寻人</span>
-QingzhuSdk.startScan(
-    ScanOptions.builder()
-        .setTimeoutMs(30_000)
-        .setNamePrefix("ESL")
-        .addProtocol("generic")
-        .build(),
-    listener);</code></pre>
-    <div class="note warn"><b>列表去重用 <code>getStableId()</code>，不要只用 MAC。</b>地址轮换的设备 MAC 会变，稳定身份不变。</div>
-    <div class="note danger"><b>扫描不会自动结束，由业务负责收尾。</b>只给 MAC 时，<code>send()</code> 会自动打开扫描寻人，找到后连接、发送；但任务层不会主动停扫描，默认 <code>ble.scanTimeoutSec = 0</code> 表示持续扫描不停止。这是为了保持设备发现与重寻址的效率。请在退出界面、登出或应用退到后台等时机，主动调用 <code>QingzhuSdk.stopScan()</code>。</div>
-    <div class="note warn"><b>关扫描前先确认没有任务在寻人。</b><code>stopScan()</code> 会直接停掉底层扫描，正在 <code>SEARCHING</code> 的任务不会重新拉起扫描，只能等 30 秒超时后重试。尽量在任务都结束或取消之后再关。</div>
-  </div>
-</section>
-
-<section id="g-task">
-  <div class="hd"><span class="no">05</span><h2>创建任务</h2></div>
-  <p class="lead">一台设备一个任务，任务里排命令。</p>
-  <div class="plate">
-    <pre><code>QTask task = QingzhuSdk.createTask(device);  <span class="cm">// 已知扫描设备</span>
-QTask task = QingzhuSdk.createTask(mac);     <span class="cm">// 只知道 MAC 也能建</span>
-QTask old  = QingzhuSdk.getTask(mac);        <span class="cm">// 只查询，没有返回 null</span>
-QingzhuSdk.deleteTask(mac);                  <span class="cm">// 删除任务</span></code></pre>
-    <div class="tw">
-      <table>
-        <thead><tr><th style="width:140px"></th><th>createTask</th><th>getTask</th></tr></thead>
-        <tbody>
-          <tr><td>已有任务</td><td>先删旧的再新建</td><td>返回已有任务</td></tr>
-          <tr><td>没有任务</td><td>新建</td><td>返回 <code>null</code></td></tr>
-          <tr><td>旧连接与排队命令</td><td>被断开、被丢弃</td><td>不受影响</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <pre><code><span class="cm">// 多个页面共享同一台设备：先查再建</span>
-QTask task = QingzhuSdk.getTask(mac);
-if (task == null) task = QingzhuSdk.createTask(mac);</code></pre>
-    <div class="note danger"><b>循环里别反复 <code>createTask</code>。</b>每次调用都是删旧建新，for 循环 100 次，前 99 条命令连任务一起被删掉，最后只剩 1 条。</div>
-  </div>
-</section>
-
-<section id="g-send">
-  <div class="hd"><span class="no">06</span><h2>连接与发送</h2></div>
-  <p class="lead">命令用 Builder 构造，一条命令一个回调。</p>
-  <div class="plate">
-    <pre><code><span class="cm">// 只连接并保持</span>
-task.connect(result -&gt; { });
-
-<span class="cm">// JSON 指令</span>
-QCommand cmd = QCommand.builder()
-    .send("{\"action\":\"echo\"}")
-    .build();
-task.send(cmd, result -&gt; { });
-
-<span class="cm">// JSON + 单块字节 / 多附件</span>
-QCommand.builder().send(json, firmwareBytes).build();
-QCommand.builder().send(json, attachments).build();
-
-<span class="cm">// 连接参数属于任务，不属于命令</span>
-task.setConnectParams(params);</code></pre>
-    <div class="note"><b>发完断不断：</b>默认由任务是否带「保持连接」期望决定；<code>keepConnected()</code> 和 <code>disconnectAfter()</code> 显式指定且互斥，同时写在 <code>build()</code> 会抛异常。</div>
-  </div>
-</section>
-
-<section id="g-result">
-  <div class="hd"><span class="no">07</span><h2>拿结果与看状态</h2></div>
-  <p class="lead">单条命令看回调，界面刷新看快照。</p>
-  <div class="plate">
-    <pre><code>task.send(cmd, result -&gt; {
-    if (result.isSuccess()) {
-        String payload = result.payload();   <span class="cm">// 可能为 null</span>
-    } else {
-        TaskStage stage = result.stage();    <span class="cm">// 失败在哪一步</span>
-        String error = result.error();
-    }
-});</code></pre>
-    <div class="tw">
-      <table>
-        <thead><tr><th style="width:110px">stage</th><th>含义</th></tr></thead>
-        <tbody>
-          <tr><td><code>SEARCH/CONNECT</code></td><td>寻人或连接失败，重试已耗尽</td></tr>
-          <tr><td><code>SEND</code></td><td>已连接后发送或业务失败</td></tr>
-          <tr><td><code>CANCEL</code></td><td>被取消，或前序命令失败连带取消</td></tr>
-          <tr><td><code>DELETE</code> / <code>CLOSED</code></td><td>任务被删除 / 已删除</td></tr>
-          <tr><td><code>BUSY</code></td><td>队列满，命令没有被接受</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <pre><code><span class="cm">// 观察全部任务：注册后立即推一次，回调在主线程</span>
-Subscription sub = QingzhuSdk.observeAll(this, snapshots -&gt; {
-    for (TaskSnapshot s : snapshots) {
-        TaskState state = s.state();
-        int pending = s.pendingCount();
-        String error = s.error();
-    }
-});
-<span class="cm">// sub.cancel();  // 不用时取消订阅</span></code></pre>
-    <div class="note danger"><b>判断成功只看 <code>isSuccess()</code>。</b><code>payload</code> 是设备回显，成功也可能为空；快照里看 <code>outcome == SUCCEEDED</code>，<code>result != null</code> 不等于成功。</div>
-  </div>
-</section>
-
-<section id="g-single">
-  <div class="hd"><span class="no">08</span><h2>单台设备配置</h2></div>
-  <p class="lead">一个能直接抄的完整例子。</p>
-  <div class="plate">
-    <pre><code>QTask task = QingzhuSdk.getTask(mac);
-if (task == null) task = QingzhuSdk.createTask(mac);
-task.setConnectParams(params);
-
-task.send(configCommand, result -&gt; {
-    if (result.isSuccess()) {
-        finish();                          <span class="cm">// 成功，退出页面</span>
-    } else if (result.stage() == TaskStage.CANCEL) {
-        showCancelled();                   <span class="cm">// 取消，业务决定是否重试</span>
-    } else {
-        showError(result.error());         <span class="cm">// 失败，不要退出</span>
-    }
-});</code></pre>
-    <div class="note"><b>退出页面别急着 deleteTask。</b>下次进来还要用这个任务；只有在你要彻底放弃这台设备时才删。</div>
-  </div>
-</section>
-
-<section id="g-batch">
-  <div class="hd"><span class="no">09</span><h2>批量配置</h2></div>
-  <p class="lead">N 台设备就是 N 个任务，一台失败不影响其他。</p>
-  <div class="plate">
-    <pre><code><span class="cm">// 1. 先按 MAC 转大写去重，total 用去重后的数量</span>
-List&lt;String&gt; macs = dedupUpper(inputMacs);
-
-AtomicInteger remaining = new AtomicInteger(macs.size());
-AtomicInteger failed = new AtomicInteger();
-
-<span class="cm">// 2. 循环发命令</span>
-for (String mac : macs) {
-    QTask task = QingzhuSdk.getTask(mac);
-    if (task == null) task = QingzhuSdk.createTask(mac);
-
-    task.send(configCommand, result -&gt; {
-        if (!result.isSuccess()) failed.incrementAndGet();
-        if (remaining.decrementAndGet() == 0) {
-            showSummary(macs.size(), failed.get());
-        }
-    });
-}</code></pre>
-    <div class="note warn"><b>不去重会出两种问题：</b>同一台设备被配多次，或者任务被 <code>createTask</code> 反复替换；而且 <code>total</code> 和实际回调次数对不上。</div>
-    <div class="note"><b>并发规模：</b>连接池默认 7 条连接，其余进无界队列排队；100 台大约等于 100/7 乘以单台耗时。</div>
-  </div>
-</section>
-
-<section id="g-gateway">
-  <div class="hd"><span class="no">10</span><h2>网关持续下发</h2></div>
-  <p class="lead">MQTT 随时来指令，一个任务不断接。不用改底层。</p>
-  <div class="plate">
-    <div class="flow">
-      <div class="fs"><div class="dot">01</div><div class="bd"><b>MQTT 到达</b><small>子线程，不能直接调 send</small></div></div>
-      <div class="fs key"><div class="dot">02</div><div class="bd"><b>投递到主线程</b><small>保证 send 串行，避免两条命令同时发</small></div></div>
-      <div class="fs"><div class="dot">03</div><div class="bd"><b>getTask 复用</b><small>没有才 createTask</small></div></div>
-      <div class="fs end"><div class="dot">04</div><div class="bd"><b>send + 定时回收</b><small>回调回执云端，空闲任务 deleteTask</small></div></div>
-    </div>
-    <pre><code><span class="cm">// 在调度器（如主线程 Handler）里执行</span>
-QTask task = QingzhuSdk.getTask(cmd.mac);
-if (task == null) task = QingzhuSdk.createTask(cmd.mac);
-
-task.send(QCommand.builder().send(cmd.payload).keepConnected().build(), result -&gt; {
-    if (result.isSuccess()) cloud.ack(cmd.id, result.payload());
-    else if (result.stage() == TaskStage.BUSY) cloud.requeue(cmd.id);
-    else cloud.fail(cmd.id, result.stage(), result.error());
-});</code></pre>
-    <div class="note danger"><b>三件事要自己保证：</b><code>send</code> 内部没有锁，并发调用要串行化；任务不会自动回收，要定时 <code>deleteTask</code>；进程重启内存队列会丢，云端要保留未确认指令重投。</div>
-  </div>
-</section>
-
-<section id="g-life">
-  <div class="hd"><span class="no">11</span><h2>取消与删除</h2></div>
-  <p class="lead">cancel 是停，delete 是换。</p>
-  <div class="plate">
-    <div class="tw">
-      <table>
-        <thead><tr><th style="width:130px"></th><th>cancel</th><th>delete</th></tr></thead>
-        <tbody>
-          <tr><td>任务对象</td><td>保留，id 不变</td><td>移除，下次是新 id</td></tr>
-          <tr><td>设备信息</td><td>保留</td><td>随任务丢掉</td></tr>
-          <tr><td>观察者</td><td>仍然有效</td><td>一并清空</td></tr>
-          <tr><td>命令 stage</td><td><code>CANCEL</code></td><td><code>DELETE</code></td></tr>
-          <tr><td>下次再发</td><td>直接 send</td><td>先 createTask</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <pre><code>task.cancel();      <span class="cm">// 停：回到操作开始前的链路状态</span>
-task.disconnect();  <span class="cm">// 断开连接，任务保留</span>
-task.delete();      <span class="cm">// 换：取消 + 断开 + 从池里移除</span></code></pre>
-  </div>
-</section>
-
-<section id="g-plugin">
-  <div class="hd"><span class="no">12</span><h2>接入自己的协议</h2></div>
-  <p class="lead">实现 ProtocolPlugin，注册进去就行，内核不用改。</p>
-  <div class="plate">
-    <pre><code>QingzhuSdk.registerProtocol(new MyProtocolPlugin());</code></pre>
-    <p class="cap">协议插件可声明识别器、稳定身份、扫描过滤、连接步骤、GATT 就绪钩子、心跳、默认配置和消息路由。</p>
-    <div class="note"><b>JSON to JSON：</b>内核不解析业务 JSON，只按 <code>protocolType</code> 路由给协议的 <code>ActionHandler</code>。新增指令不用改任务池 API。</div>
-    <div class="note ok"><b>不想要某个设备了，删掉对应 AAR 即可。</b>门面按类名装配，找不到类就跳过，原来写好的业务代码不改、不报错。</div>
-    <div class="note warn"><b>一个细节：</b>整个协议 AAR 被删后，扫描阶段可能没有 recognizer 认领设备，失败会发生在寻人超时，而不一定是 <code>PROTOCOL_NOT_FOUND</code>。业务侧按「命令失败」统一处理即可。</div>
-  </div>
-</section>
-
-<section id="g-limits">
-  <div class="hd"><span class="no">13</span><h2>先记住这些边界</h2></div>
-  <div class="plate">
-    <div class="note danger"><b><code>send</code> 不是线程安全的。</b>子线程并发调用要自己串行化，否则可能两条命令同时发。</div>
-    <div class="note warn"><b>任务不会自动回收。</b>长期运行的服务要定时 <code>deleteTask</code>，否则任务池只增不减。</div>
-    <div class="note warn"><b>没有设备主动上报通路。</b><code>QTask</code> 没有 <code>listen</code>，设备主动推送暂时收不到。</div>
-    <div class="note warn"><b>扫描不会自动停止。</b>任务 <code>send</code> 可自动开扫描寻人，但任务层不负责关；默认持续扫描，业务需在退出界面、登出等时机主动 <code>stopScan()</code>。</div>
-    <div class="note"><b>只有 Android 实现。</b><code>BleAdapter</code> 是平台抽象，但目前只有一份实现。</div>
-  </div>
-</section>
-
-</div>
-
-<div class="foot" id="foot">青竹 BLE SDK · 文档 · 内容对照 qingzhu-core 源码</div>
-
-</div></main>
+</footer>
 
 <script>
+/* 场景速查 */
 (function(){
-  var side = document.querySelector('.side');
-  var toc = document.getElementById('toc');
-  var foot = document.getElementById('foot');
-  var views = Array.prototype.slice.call(document.querySelectorAll('.view'));
-  var viewLinks = Array.prototype.slice.call(document.querySelectorAll('#viewnav a'));
-  var titles = { home:'文档', arch:'架构全景', guide:'接入指南' };
-  var foots = {
-    home:'青竹 BLE SDK · 文档 · 内容对照 qingzhu-core 源码',
-    arch:'青竹 BLE SDK · 架构全景 · 对照 qingzhu-core 源码',
-    guide:'青竹 BLE SDK · 接入指南 · 照着 README 走一遍'
-  };
+  var DATA=[
+    {t:'短连接发数据',d:'<b>最常用。</b>一条 send + disconnectAfter：连接、发送、断开由任务池一次跑完，适合改配置、改价这类一次性操作。',
+     c:'<span class="t">QCommand</span> cmd = <span class="t">QCommand</span>.builder()\n        .send(<span class="s">"{\\"action\\":\\"setConfig\\"}"</span>)\n        .disconnectAfter()\n        .build();\ntask.send(cmd, r -&gt; handle(r));'},
+    {t:'连接并保持',d:'<b>长连接。</b>connect() 让任务保持连接；后续 send 加 keepConnected()，避免每条指令都重连。心跳探活由协议声明。',
+     c:'task.send(<span class="t">QCommand</span>.builder().connect().build(), r -&gt; handle(r));\n\n<span class="c">// 后续指令保持连接</span>\ntask.send(<span class="t">QCommand</span>.builder()\n        .send(json).keepConnected().build(), r -&gt; handle(r));'},
+    {t:'多附件 / OTA',d:'<b>大数据。</b>JSON 描述动作，字节附件按 key 传入；用单条 timeout 覆盖默认值，给设备解压与刷屏留足时间。',
+     c:'<span class="t">Map</span>&lt;<span class="t">String</span>, <span class="t">Object</span>&gt; att = <span class="k">new</span> <span class="t">HashMap</span>&lt;&gt;(); att.put(<span class="s">"dataA"</span>, imageBytes);\ntask.send(<span class="t">QCommand</span>.builder()\n        .send(json, att)\n        .timeout(<span class="n">120_000L</span>)\n        .disconnectAfter().build(), r -&gt; handle(r));'},
+    {t:'批量下发',d:'<b>一串 MAC。</b>每台独立排队，慢设备不挡快的；失败带 stage 与错误码，可以只重试失败项。',
+     c:'<span class="k">for</span> (<span class="t">String</span> mac : macs) {\n    <span class="t">QTask</span> t = <span class="t">QingzhuSdk</span>.getTask(mac);\n    <span class="k">if</span> (t == <span class="k">null</span>) t = <span class="t">QingzhuSdk</span>.createTask(mac);\n    t.send(cmd, r -&gt; collect(r));\n}'},
+    {t:'断线自动重连',d:'<b>永久连接。</b>声明重连策略后，设备重新被扫到才发起连接；用户主动断开会撤销登记，不在背后狂试。支持固定间隔与指数退避。',
+     c:'<span class="t">ReconnectPolicy</span> policy =\n        <span class="t">ReconnectPolicy</span>.foreverWithBackoff(<span class="n">1_000L</span>, <span class="n">1.5f</span>);\ntask.send(<span class="t">QCommand</span>.builder()\n        .connect().reconnect(policy).build(), r -&gt; handle(r));'},
+    {t:'全局配置',d:'<b>一个配置中心。</b>并发容量、传输窗口、重试次数、命令超时、心跳节奏、写入窗口等统一配置；未声明的 key 会直接报错，避免配置静默失效。',
+     c:'<span class="t">QingzhuSdk</span>.setMaxConnections(<span class="n">0</span>);      <span class="c">// 0 = 按机型自动</span>\n<span class="t">QingzhuSdk</span>.setMaxTransfers(<span class="n">3</span>);\n<span class="t">QingzhuSdk</span>.setMaxRetries(<span class="n">3</span>);\n<span class="t">QingzhuSdk</span>.setCommandTimeoutMs(<span class="n">8_000L</span>);\n<span class="t">QingzhuSdk</span>.settings().listAll();    <span class="c">// 列出全部可配项</span>'}
+  ];
+  var tabs=[].slice.call(document.querySelectorAll('#tabs .tab'));
+  var code=document.getElementById('tabCode'), desc=document.getElementById('tabDesc');
+  function show(i){
+    tabs.forEach(function(b,k){ b.classList.toggle('on',k===i); });
+    code.innerHTML='<div class="codebox"><div class="bar"><b>'+DATA[i].t+'</b><button class="copy" type="button">复制</button></div><pre>'+DATA[i].c+'</pre></div>';
+    desc.innerHTML=DATA[i].d;
+    bindCopy();
+  }
+  tabs.forEach(function(b){ b.addEventListener('click',function(){ show(parseInt(b.getAttribute('data-i'),10)); }); });
+  show(0);
 
-  var current = null;
-  var tocLinks = [];
-  var active = -1;
-  var locked = false;
-  var ticking = false;
-
-  function pad(n){ return n < 10 ? '0' + n : '' + n; }
-
-  function buildToc(view){
-    toc.innerHTML = '';
-    tocLinks = Array.prototype.slice.call(view.querySelectorAll('section[id]')).map(function(s, i){
-      var h = s.querySelector('.hd h2');
-      var a = document.createElement('a');
-      a.href = '#' + s.id;
-      var n = document.createElement('i');
-      n.textContent = pad(i + 1);
-      a.appendChild(n);
-      a.appendChild(document.createTextNode(h ? h.textContent : s.id));
-      a.addEventListener('click', function(){
-        locked = true;
-        paint(i);
-        var done = false;
-        function unlock(){
-          if (done) return;
-          done = true;
-          locked = false;
-          paint(indexAtLine());
-        }
-        if ('onscrollend' in window) window.addEventListener('scrollend', unlock, { once: true });
-        setTimeout(unlock, 1200);
+  /* 复制代码 */
+  function bindCopy(){
+    [].forEach.call(document.querySelectorAll('.copy'),function(btn){
+      if(btn.dataset.bound) return;
+      btn.dataset.bound='1';
+      btn.addEventListener('click',function(){
+        var txt=btn.closest('.codebox').querySelector('pre').innerText;
+        var done=function(){ var old=btn.textContent; btn.textContent='已复制'; setTimeout(function(){btn.textContent=old;},1400); };
+        if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done,function(){}); }
+        else{ var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select();
+              try{document.execCommand('copy');done();}catch(e){} document.body.removeChild(ta); }
       });
-      toc.appendChild(a);
-      return a;
     });
-    active = -1;
   }
+  window.__bindCopy=bindCopy;
+  bindCopy();
+})();
 
-  // 判定线取视口上 1/3，避免平滑滚动途中高亮乱跳
-  function indexAtLine(){
-    var line = window.innerHeight * 0.33;
-    var secs = current ? current.querySelectorAll('section[id]') : [];
-    var idx = 0;
-    for (var i = 0; i < secs.length; i++) {
-      if (secs[i].getBoundingClientRect().top <= line) idx = i;
-    }
-    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
-      idx = Math.max(0, secs.length - 1);
-    }
-    return idx;
-  }
-
-  function paint(i){
-    if (i === active) return;
-    active = i;
-    for (var j = 0; j < tocLinks.length; j++) tocLinks[j].classList.toggle('on', j === i);
-    var a = tocLinks[i];
-    if (side && a) {
-      var t = a.offsetTop, b = t + a.offsetHeight;
-      if (t < side.scrollTop + 8 || b > side.scrollTop + side.clientHeight - 8) {
-        side.scrollTop = t - side.clientHeight / 2 + a.offsetHeight / 2;
-      }
-    }
-  }
-
+/* 导航高亮 */
+(function(){
+  var links=[].slice.call(document.querySelectorAll('#nav a'));
+  var secs=links.map(function(a){ return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
   function sync(){
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(function(){
-      ticking = false;
-      if (!locked && current) paint(indexAtLine());
-    });
+    var y=window.scrollY+120, idx=-1;
+    secs.forEach(function(s,i){ if(s.offsetTop<=y) idx=i; });
+    links.forEach(function(a,i){ a.classList.toggle('on',i===idx); });
   }
+  window.addEventListener('scroll',sync,{passive:true}); sync();
+})();
 
-  function showView(name, hash){
-    if (!titles[name]) name = 'home';
-    current = document.getElementById('view-' + name);
-    views.forEach(function(v){ v.hidden = v !== current; });
-    viewLinks.forEach(function(a){ a.classList.toggle('on', a.getAttribute('data-view') === name); });
-    foot.textContent = foots[name];
-    document.title = '青竹 BLE SDK · ' + titles[name];
-    buildToc(current);
-    var url = location.pathname + (name === 'home' ? '' : '?view=' + name) + (hash || '');
-    try { history.replaceState(null, '', url); } catch (e) {}
-
-    locked = true;
-    var target = hash ? document.getElementById(hash.slice(1)) : null;
-    if (target && current.contains(target)) {
-      requestAnimationFrame(function(){ target.scrollIntoView(); });
-    } else {
-      window.scrollTo(0, 0);
-    }
-    setTimeout(function(){ locked = false; paint(indexAtLine()); }, target ? 900 : 60);
-  }
-
-  document.addEventListener('click', function(e){
-    var el = e.target;
-    while (el && el !== document && !(el.getAttribute && el.getAttribute('data-view'))) el = el.parentNode;
-    if (!el || el === document) return;
-    var href = el.getAttribute('href') || '';
-    var at = href.indexOf('#');
-    e.preventDefault();
-    showView(el.getAttribute('data-view'), at >= 0 ? href.slice(at) : '');
-  });
-
-  var m = location.search.match(/[?&]view=(home|arch|guide|api)/);
-  var name = m ? m[1] : '';
-  var hash = location.hash;
-  if (name === 'api') name = 'guide';
-  if (!name) {
-    if (/^#s(10|[1-9])$/.test(hash)) name = 'arch';
-    else if (/^#(g-[a-z]+|sdk|task|cmd|result|enum|scan)$/.test(hash)) name = 'guide';
-    else name = 'home';
-  }
-  showView(name, hash);
-  window.addEventListener('scroll', sync, { passive: true });
-  window.addEventListener('resize', sync);
+/* 兼容 README 里的旧链接 ?view=guide / ?view=arch */
+(function(){
+  var v=new URLSearchParams(location.search).get('view');
+  var map={guide:'#api',arch:'#architecture',business:'#business',protocol:'#protocol'};
+  if(v&&map[v]){ history.replaceState(null,'',location.pathname+map[v]); setTimeout(function(){
+    var el=document.querySelector(map[v]); if(el) el.scrollIntoView({behavior:'smooth'});
+  },120); }
 })();
 </script>
 </body>
